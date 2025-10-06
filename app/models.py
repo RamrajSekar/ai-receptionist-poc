@@ -19,7 +19,7 @@ from datetime import datetime
 class AppointmentCreate(BaseModel):
     name: str
     phone: str
-    status: Optional[str] = "pending"
+    status: Optional[str] = "Pending"
     datetime: str 
 
 class AppointmentResponse(BaseModel):

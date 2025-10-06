@@ -26,7 +26,7 @@ db = client.receptionist_poc
 appointments_collection = db.appointments
 
 try:
-    appointments_collection.create_index("phone", unique=True)
+    appointments_collection.create_index([("phone", 1), ("datetime", 1)], unique=True)
     logger.info("Unique index created on phone")
 except Exception as e:
     logger.error(f"Index creation error: {str(e)}")
