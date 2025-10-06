@@ -1,21 +1,32 @@
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+import os
+from pymongo import MongoClient
+import logging
+from dotenv import load_dotenv
 
-SQLALCHEMY_DATABASE_URL = "sqlite:///appointments.db"
+# Load .env file
+load_dotenv("app\\.env")
 
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False},pool_size=10, max_overflow=20
-)
-session_local = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-Base = declarative_base()
+MONGODB_URL = os.getenv("MONGODB_URL")
+# Log only the host part to avoid exposing credentials
+log_url = MONGODB_URL.split("@")[1] if "@" in MONGODB_URL else MONGODB_URL
+logger.info(f"Connecting to MongoDB: {log_url}")
 
+try:
+    client = MongoClient(MONGODB_URL, serverSelectionTimeoutMS=5000)
+    client.admin.command('ping')  # Test connection
+    logger.info("MongoDB connection successful")
+except Exception as e:
+    logger.error(f"MongoDB connection failed: {str(e)}")
+    raise
 
-def get_db():
-    print(f"Connecting to: {SQLALCHEMY_DATABASE_URL}")
-    db = session_local()
-    try:
-        yield db
-    finally:
-        db.close()
+db = client.receptionist_poc
+appointments_collection = db.appointments
+
+try:
+    appointments_collection.create_index("phone", unique=True)
+    logger.info("Unique index created on phone")
+except Exception as e:
+    logger.error(f"Index creation error: {str(e)}")

@@ -1,8 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from sqlalchemy.exc import IntegrityError, OperationalError
-from app.database import get_db
-from app.models import Appointment
+from app.models import AppointmentCreate, AppointmentResponse
+from app.database import appointments_collection
+from pymongo.errors import DuplicateKeyError
 from datetime import datetime
 import logging
 
@@ -10,38 +9,59 @@ router = APIRouter()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-@router.post("/")
-def create_booking(name: str,phone: str,date_time_str: str,db: Session = Depends(get_db)):
-    appointment = Appointment(
-        name=name,
-        phone=phone,
-        datetime=datetime.fromisoformat(date_time_str)
-    )
-    if db.query(Appointment).filter(Appointment.phone == appointment.phone).first():
-        raise HTTPException(status_code=400, detail="Phone number already exists")
-    elif len(phone)!= 10:
-        raise HTTPException(status_code=400, detail="Invalid Phone Number")
+@router.post("/",response_model=AppointmentResponse)
+def create_booking(appointment: AppointmentCreate):
     try:
-        db.add(appointment)
-        db.commit()
-        db.refresh(appointment)
-        return {"message" : "Appointment Booked","Appointment_Id":appointment.id}
-    except IntegrityError as e:
+        existing = appointments_collection.find_one({"phone": appointment.phone})
+        if existing:
+            raise HTTPException(status_code=400, detail="Phone number already exists")
+        elif len(appointment.phone)!= 10:
+            raise HTTPException(status_code=400, detail="Invalid Phone Number")
+        appointment_dict = appointment.model_dump()
+        result = appointments_collection.insert_one(appointment_dict)
+        appointment_dict["id"] = str(result.inserted_id)
+        logger.info(f"Created booking for {appointment.phone}")
+        return appointment_dict
+    except Exception as e:
         logger.error(f"Database error: {str(e)}")
-        db.rollback()
         raise HTTPException(status_code=400, detail="Invalid Phone number/Number already exists")
 
-@router.get("/")
-def get_bookings(db: Session=Depends(get_db)):
+
+@router.get("/",response_model=list[AppointmentResponse])
+def get_bookings():
     try:
-        bookings = db.query(Appointment).all()
-        logger.info(f"Retrieved {len(bookings)} bookings")
-        if not bookings:
-            return {"message": "No appointments found", "data": []}
-        return bookings
-    except OperationalError as e:
-        logger.error(f"Database error: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+        bookings = list(appointments_collection.find())
+        response = [
+            {
+                "id": str(booking["_id"]),  # Convert ObjectId to string
+                "name": booking["name"],
+                "phone": booking["phone"],
+                "status": booking["status"],
+                "datetime": booking["datetime"]
+            }
+            for booking in bookings
+        ]
+        logger.info(f"Retrieved {len(response)} bookings")
+        return response
+    except KeyError as e:
+        logger.error(f"Missing field in document: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Invalid document structure: missing {str(e)}")
     except Exception as e:
         logger.error(f"Unexpected error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+# Below is for SQLITE
+# @router.get("/")
+# def get_bookings(db: Session=Depends(get_db)):
+#     try:
+#         bookings = db.query(Appointment).all()
+#         logger.info(f"Retrieved {len(bookings)} bookings")
+#         if not bookings:
+#             return {"message": "No appointments found", "data": []}
+#         return bookings
+#     except OperationalError as e:
+#         logger.error(f"Database error: {str(e)}")
+#         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+#     except Exception as e:
+#         logger.error(f"Unexpected error: {str(e)}")
+#         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
