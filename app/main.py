@@ -10,10 +10,6 @@ app = FastAPI(title='AI Receptionist POC')
 async def root():
     return {"message": "Welcome to the AI Assistant API"}
 
-@app.get("/health")
-def health_check():
-    return {"status": "healthy"}
-
 # @app.get("/init-db")
 # async def init_db():
 #     Base.metadata.create_all(bind=engine)
