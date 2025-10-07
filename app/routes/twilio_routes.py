@@ -16,7 +16,7 @@ async def voice_handler(From: str = Form('4757770732'),To: str = Form('662547379
     return Response(content=str(resp),media_type="application/xml")
 
 @router.post("/process_recording")
-async def process_recording(RecordingUrl: str = Form(),From: str = Form('4757770732')):
+async def process_recording(RecordingUrl: str = Form(...),From: str = Form(...)):
     logger.info(f"Recording from {From}: {RecordingUrl}")
 
     # ToDo: Download and do speech to text later

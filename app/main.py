@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.routes import calls, booking
+from app.routes import calls, booking, twilio_routes
 # from app.models import Base
 # from app.database import engine
 import uvicorn
@@ -22,6 +22,7 @@ def health_check():
 #Register Routes
 app.include_router(calls.router, prefix="/calls",tags=["Calls"])
 app.include_router(booking.router, prefix="/bookings",tags=["Booking"])
+app.include_router(twilio_routes.router, tags=["twilio"])
 
 if __name__=="__main__":
     uvicorn.run("app.main:app", host="0.0.0.0", port=8000,reload=True)
