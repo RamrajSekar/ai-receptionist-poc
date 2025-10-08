@@ -67,8 +67,8 @@ def handle_recording(rec_url: str, from_number: str):
         audio_file = f"recording_{from_number}.wav"
         resp = requests.get(f"{rec_url}?Format=wav",auth=twilio_auth)
         content_type = resp.headers.get("Content-Type", "")
-        logger.info("Content-Type:", content_type)
-        logger.info("File size:", len(resp.content))
+        logger.info(f"Content-Type:", {content_type})
+        logger.info(f"File size:", {len(resp.content)})
         if "audio" not in content_type:
             logger.error(f"❌ Invalid content type from Twilio: {content_type}")
             return
