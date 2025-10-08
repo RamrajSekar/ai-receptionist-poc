@@ -6,6 +6,7 @@ import requests
 import openai
 from openai import RateLimitError,APIError
 import os
+import time
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -26,6 +27,21 @@ async def voice_handler(From: str = Form('4757770732'),To: str = Form('662547379
         logger.error(f"Error Occurred: {str(e)}")
         raise HTTPException(status_code=400, detail="Error Occurred")
 
+def transcribe_with_retry(file_path, retries=5):
+    for attempt in range(retries):
+        try:
+            with open(file_path, "rb") as f:
+                transcription = openai.audio.transcriptions.create(
+                    model="whisper-1",
+                    file=f
+                )
+            return transcription.text
+        except openai.RateLimitError:
+            wait = 2 ** attempt  # exponential backoff
+            logger.warning(f"Rate limit hit. Retrying in {wait}s...")
+            time.sleep(wait)
+    raise Exception("Max retries exceeded for transcription")
+
 @router.post("/process_recording")
 async def process_recording(RecordingUrl: str = Form(...),From: str = Form(...)):
     try:
@@ -37,10 +53,12 @@ async def process_recording(RecordingUrl: str = Form(...),From: str = Form(...))
         with open(audio_file, "wb") as f:
             f.write(resp.content)
         #Step 2: Transcribe to Whisper
-        with open(audio_file, "rb") as f:
-            transcribe = openai.audio.transcriptions.create(model="whisper-1",file=f)
-        user_text = transcribe.text
-        logger.info(f"Transcribed text from {From}: {user_text}")
+        # with open(audio_file, "rb") as f:
+        #     transcribe = openai.audio.transcriptions.create(model="whisper-1",file=f)
+        #     transcribe = openai.audio.transcriptions.create(model="whisper-1",file=f)
+        # user_text = transcribe.text
+        transcribe = transcribe_with_retry(audio_file)
+        logger.info(f"Transcribed text from {From}: {transcribe}")
         #Step 3: Respond back to user
         resp = VoiceResponse()
         resp.say("Thank you, We received you apoointment request!")
