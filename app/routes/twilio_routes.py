@@ -37,6 +37,18 @@ async def voice_handler(From: str = Form('4757770732'),To: str = Form('662547379
         logger.error(f"Error Occurred: {str(e)}")
         raise HTTPException(status_code=400, detail="Error Occurred")
 
+def download_recording_with_retry(rec_url, sid, token, retries=5, wait=3):
+    for attempt in range(retries):
+        resp = requests.get(f"{rec_url}.wav", auth=(sid, token))
+        content_type = resp.headers.get("Content-Type", "")
+        logger.info(f"Attempt {attempt+1}: Content-Type: {content_type}")
+        if "audio" in content_type:
+            return resp
+        logger.warning(f"Recording not ready (got {content_type}). Retrying in {wait}s...")
+        time.sleep(wait)
+    logger.error("❌ Recording not ready after retries.")
+    return None
+
 # This is to handle retry from Whisper
 def transcribe_with_retry(file_path, retries=5):
     for attempt in range(retries):
@@ -61,18 +73,17 @@ def handle_recording(rec_url: str, from_number: str):
         # Load Twilio credentials
         twilio_sid = os.getenv("TWILIO_ACCOUNT_SID")
         twilio_token = os.getenv("TWILIO_AUTH_TOKEN")
-        client = Client(twilio_sid, twilio_token)
-        # rec = client.recordings(rec_url.split("/")[7]).fetch()
-        # logger.info(f"Client Response:", {rec})
-        assert isinstance(twilio_sid, str)
-        assert isinstance(twilio_token, str)
-        # Step 1: Download audio as wav same as Twilio format
-        twilio_auth: tuple[str, str] = (twilio_sid, twilio_token)
         audio_file = f"recording_{from_number}.wav"
-        resp = requests.get(f"{rec_url}.wav",auth=twilio_auth)
+        resp = download_recording_with_retry(rec_url,twilio_sid,twilio_token)
+        # assert isinstance(twilio_sid, str)
+        # assert isinstance(twilio_token, str)
+        # Step 1: Download audio as wav same as Twilio format
+        # twilio_auth: tuple[str, str] = (twilio_sid, twilio_token)
+        
+        # resp = requests.get(f"{rec_url}.wav",auth=twilio_auth)
         content_type = resp.headers.get("Content-Type", "")
-        logger.info(f"Content-Type:", {content_type})
-        logger.info(f"File size:, {len(resp.content)} bytes")
+        logger.info(f"Content-Type: {content_type}")
+        logger.info(f"File size: {len(resp.content)} bytes")
         if "audio" not in content_type:
             logger.error(f"❌ Invalid content type from Twilio: {str(content_type)}")
             return
