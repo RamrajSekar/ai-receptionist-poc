@@ -62,8 +62,8 @@ def handle_recording(rec_url: str, from_number: str):
         twilio_sid = os.getenv("TWILIO_ACCOUNT_SID")
         twilio_token = os.getenv("TWILIO_AUTH_TOKEN")
         client = Client(twilio_sid, twilio_token)
-        rec = client.recordings(rec_url.split("/")[7]).fetch()
-        logger.info(f"Client Response:", {str(rec)})
+        # rec = client.recordings(rec_url.split("/")[7]).fetch()
+        # logger.info(f"Client Response:", {rec})
         assert isinstance(twilio_sid, str)
         assert isinstance(twilio_token, str)
         # Step 1: Download audio as wav same as Twilio format
@@ -71,8 +71,8 @@ def handle_recording(rec_url: str, from_number: str):
         audio_file = f"recording_{from_number}.wav"
         resp = requests.get(f"{rec_url}.wav",auth=twilio_auth)
         content_type = resp.headers.get("Content-Type", "")
-        logger.info(f"Content-Type:", {str(content_type)})
-        logger.info(f"File size:", {str(len(resp.content))})
+        logger.info(f"Content-Type:", {content_type})
+        logger.info(f"File size:, {len(resp.content)} bytes")
         if "audio" not in content_type:
             logger.error(f"❌ Invalid content type from Twilio: {str(content_type)}")
             return
