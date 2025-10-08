@@ -54,10 +54,17 @@ def transcribe_with_retry(file_path, retries=5):
 def handle_recording(rec_url: str, from_number: str):
     try:
         logger.info(f"Backround job: Downloading {rec_url}")
-        audio_file = f"recording_{from_number}.wav"
+        
         # Step 1: Download audio as wav same as Twilio format
-        audio_file = "call_recording.wav"
-        resp = requests.get(f"{rec_url}.wav")
+        audio_file = f"recording_{from_number}.wav"
+        resp = requests.get(f"{rec_url}?Format=wav")
+        content_type = resp.headers.get("Content-Type", "")
+        logger.info("Content-Type:", content_type)
+        logger.info("File size:", len(resp.content))
+        if "audio" not in content_type:
+            logger.error(f"❌ Invalid content type from Twilio: {content_type}")
+            return
+        # Save to disk
         with open(audio_file, "wb") as f:
             f.write(resp.content)
         # Step 2: Transcribe to Whisper
