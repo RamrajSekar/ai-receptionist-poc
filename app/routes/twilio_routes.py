@@ -13,15 +13,22 @@ logger = logging.getLogger(__name__)
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
+def get_xml_length(resp,route):
+    # resp_xml = str(resp)
+    xml_size = len(str(resp).encode("utf-8"))
+    logger.info(f"🧾 TwiML size for {route}: {xml_size} bytes")
+    # return Response(content=str(resp), media_type="application/xml")
+
 @router.post("/voice")
 async def voice_handler(From: str = Form('4757770732'),To: str = Form('6625473791'),):
     try:
         logger.info(f"Incoming Call from {From} to {To}")
         resp = VoiceResponse()
-        resp.say("Hello! You've reached the AI Receptionist. Please say your name and phone number followed by date and time for your appointment after the beep!")
+        resp.say("Hello! You reached receptionist. Please state your name and appointment time after the beep!")
         resp.record(max_length=20, play_beep=True, action="/process_recording")
         # resp.say("Press the # key to end the call!")
         # resp.gather(finish_on_key='#')
+        get_xml_length(resp,'Voice')
         return Response(content=str(resp),media_type="application/xml")
     except Exception as e:
         logger.error(f"Error Occurred: {str(e)}")
@@ -62,6 +69,8 @@ def handle_recording(rec_url: str, from_number: str):
     except Exception as e:
             logger.error(f"Error in backgroud transcribtion: {str(e)}!")
 
+
+
 @router.post("/process_recording")
 async def process_recording(background_tasks: BackgroundTasks,RecordingUrl: str = Form(...),From: str = Form(...)):
     try:
@@ -84,7 +93,8 @@ async def process_recording(background_tasks: BackgroundTasks,RecordingUrl: str 
         background_tasks.add_task(handle_recording,RecordingUrl,From)
         #Step 3: Respond back to user
         resp = VoiceResponse()
-        resp.say("Thank you, We received you appointment request!")
+        resp.say("Thank you, We received your request!")
+        get_xml_length(resp,'process_recording')
         return Response(content=str(resp),media_type="application/xml")
     except RateLimitError:
         raise HTTPException(status_code=400, detail="Open AI Rate limit Exceeded. Please try again later!")
