@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Form,HTTPException, BackgroundTasks
 from fastapi.responses import Response
 from twilio.twiml.voice_response import VoiceResponse
+from twilio.rest import Client
 import logging
 import requests
 import openai
@@ -60,17 +61,20 @@ def handle_recording(rec_url: str, from_number: str):
         # Load Twilio credentials
         twilio_sid = os.getenv("TWILIO_ACCOUNT_SID")
         twilio_token = os.getenv("TWILIO_AUTH_TOKEN")
+        client = Client(twilio_sid, twilio_token)
+        rec = client.recordings(rec_url.split("/")[7]).fetch()
+        logger.info(f"Client Response:", {str(rec)})
         assert isinstance(twilio_sid, str)
         assert isinstance(twilio_token, str)
         # Step 1: Download audio as wav same as Twilio format
         twilio_auth: tuple[str, str] = (twilio_sid, twilio_token)
         audio_file = f"recording_{from_number}.wav"
-        resp = requests.get(f"{rec_url}?Format=wav",auth=twilio_auth)
+        resp = requests.get(f"{rec_url}.wav",auth=twilio_auth)
         content_type = resp.headers.get("Content-Type", "")
-        logger.info(f"Content-Type:", {content_type})
-        logger.info(f"File size:", {len(resp.content)})
+        logger.info(f"Content-Type:", {str(content_type)})
+        logger.info(f"File size:", {str(len(resp.content))})
         if "audio" not in content_type:
-            logger.error(f"❌ Invalid content type from Twilio: {content_type}")
+            logger.error(f"❌ Invalid content type from Twilio: {str(content_type)}")
             return
         # Save to disk
         with open(audio_file, "wb") as f:
