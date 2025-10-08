@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Form,HTTPException
+from fastapi import APIRouter, Form,HTTPException, BackgroundTasks
 from fastapi.responses import Response
 from twilio.twiml.voice_response import VoiceResponse
 import logging
@@ -27,6 +27,7 @@ async def voice_handler(From: str = Form('4757770732'),To: str = Form('662547379
         logger.error(f"Error Occurred: {str(e)}")
         raise HTTPException(status_code=400, detail="Error Occurred")
 
+# This is to handle retry from Whisper
 def transcribe_with_retry(file_path, retries=5):
     for attempt in range(retries):
         try:
@@ -36,35 +37,57 @@ def transcribe_with_retry(file_path, retries=5):
                     file=f
                 )
             return transcription.text
-        except openai.RateLimitError:
+        except RateLimitError:
             wait = 2 ** attempt  # exponential backoff
             logger.warning(f"Rate limit hit. Retrying in {wait}s...")
             time.sleep(wait)
     raise Exception("Max retries exceeded for transcription")
 
-@router.post("/process_recording")
-async def process_recording(RecordingUrl: str = Form(...),From: str = Form(...)):
-    try:
-        logger.info(f"Recording from {From}: {RecordingUrl}")
 
+def handle_recording(rec_url: str, from_number: str):
+    try:
+        logger.info(f"Backround job: Downloading {rec_url}")
+        audio_file = f"recording_{from_number}.wav"
         # Step 1: Download audio as wav same as Twilio format
         audio_file = "call_recording.wav"
-        resp = requests.get(f"{RecordingUrl}.wav")
+        resp = requests.get(f"{rec_url}.wav")
         with open(audio_file, "wb") as f:
             f.write(resp.content)
-        #Step 2: Transcribe to Whisper
-        # with open(audio_file, "rb") as f:
-        #     transcribe = openai.audio.transcriptions.create(model="whisper-1",file=f)
-        #     transcribe = openai.audio.transcriptions.create(model="whisper-1",file=f)
-        # user_text = transcribe.text
+        # Step 2: Transcribe to Whisper
         transcribe = transcribe_with_retry(audio_file)
-        logger.info(f"Transcribed text from {From}: {transcribe}")
+        if transcribe:
+            logger.info(f"Transcribed text from {from_number}: {transcribe}")
+        else:
+            logger.info("Failed Transcription After Retry!")
+    except Exception as e:
+            logger.error(f"Error in backgroud transcribtion: {str(e)}!")
+
+@router.post("/process_recording")
+async def process_recording(background_tasks: BackgroundTasks,RecordingUrl: str = Form(...),From: str = Form(...)):
+    try:
+        # Commented on 7/10/2025
+        # logger.info(f"Recording from {From}: {RecordingUrl}")
+
+        # # Step 1: Download audio as wav same as Twilio format
+        # audio_file = "call_recording.wav"
+        # resp = requests.get(f"{RecordingUrl}.wav")
+        # with open(audio_file, "wb") as f:
+        #     f.write(resp.content)
+        # # Step 2: Transcribe to Whisper
+        # # with open(audio_file, "rb") as f:
+        # #     transcribe = openai.audio.transcriptions.create(model="whisper-1",file=f)
+        # #     transcribe = openai.audio.transcriptions.create(model="whisper-1",file=f)
+        # # user_text = transcribe.text
+        # transcribe = transcribe_with_retry(audio_file)
+        # logger.info(f"Transcribed text from {From}: {transcribe}")
+        # Queue the background job
+        background_tasks.add_task(handle_recording,RecordingUrl,From)
         #Step 3: Respond back to user
         resp = VoiceResponse()
-        resp.say("Thank you, We received you apoointment request!")
+        resp.say("Thank you, We received you appointment request!")
         return Response(content=str(resp),media_type="application/xml")
     except RateLimitError:
         raise HTTPException(status_code=400, detail="Open AI Rate limit Exceeded. Please try again later!")
     except Exception as e:
         logger.error(f"Error Occurred: {str(e)}")
-        raise HTTPException(status_code=400, detail="Error Occurred")
+        raise HTTPException(status_code=400, detail="Error Occurred In Process Recording!!")
