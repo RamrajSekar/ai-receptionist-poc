@@ -12,6 +12,8 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
+twilio_sid = os.getenv("TWILIO_ACCOUNT_SID")
+twilio_token = os.getenv("TWILIO_AUTH_TOKEN")
 
 def get_xml_length(resp,route):
     # resp_xml = str(resp)
@@ -55,9 +57,15 @@ def handle_recording(rec_url: str, from_number: str):
     try:
         logger.info(f"Backround job: Downloading {rec_url}")
         
+        # Load Twilio credentials
+        twilio_sid = os.getenv("TWILIO_ACCOUNT_SID")
+        twilio_token = os.getenv("TWILIO_AUTH_TOKEN")
+        assert isinstance(twilio_sid, str)
+        assert isinstance(twilio_token, str)
         # Step 1: Download audio as wav same as Twilio format
+        twilio_auth: tuple[str, str] = (twilio_sid, twilio_token)
         audio_file = f"recording_{from_number}.wav"
-        resp = requests.get(f"{rec_url}?Format=wav")
+        resp = requests.get(f"{rec_url}?Format=wav",auth=twilio_auth)
         content_type = resp.headers.get("Content-Type", "")
         logger.info("Content-Type:", content_type)
         logger.info("File size:", len(resp.content))
