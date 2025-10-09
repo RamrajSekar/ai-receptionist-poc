@@ -1,6 +1,10 @@
 from bson.objectid import ObjectId
 from .database import appointments_collection
 from pymongo.errors import DuplicateKeyError
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 def create_appointment(data):
     try:
@@ -38,3 +42,26 @@ def update_appointment_status(appointment_id: str, status: str):
         {"$set": {"status": status}}
     )
     return result.modified_count
+
+def save_appointment(phone, name, datetime, intent=None,transcript=None):
+    try:
+        update_data = {
+                    "name":name,
+                    "datetime":datetime,
+                    "intent":intent,
+                    "status":"Pending",
+                    "last_updated": datetime.utcnow()
+                }
+        appointments_collection.update_one(
+            {"phone":phone},
+            {"$set": update_data},
+            upsert=True
+        )
+        if transcript:
+            update_data['transcript']=transcript
+        if intent:
+            update_data['intent']=intent
+        logger.info(f"Appointment stored/updated for {phone}")
+    except Exception as e:
+        logger.error(f"Error saving appointment: {str(e)}")
+        

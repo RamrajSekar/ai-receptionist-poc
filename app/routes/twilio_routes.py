@@ -8,6 +8,8 @@ import openai
 from openai import RateLimitError,APIError
 import os
 import time
+from app.ai_utils import extract_appointment_details
+from app.db_utils import save_appointment
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -94,6 +96,15 @@ def handle_recording(rec_url: str, from_number: str):
         transcribe = transcribe_with_retry(audio_file)
         if transcribe:
             logger.info(f"Transcribed text from {from_number}: {transcribe}")
+            details = extract_appointment_details(transcribe,from_number)
+            if details:
+                save_appointment(
+                    from_number,
+                    details.get("name"),
+                    details.get("datetime"),
+                    details.get("intent"),
+                    transcribe
+                )
         else:
             logger.info("Failed Transcription After Retry!")
     except Exception as e:
