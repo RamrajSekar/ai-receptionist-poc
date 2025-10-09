@@ -9,6 +9,8 @@ load_dotenv("app\\.env")
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
+
 MONGODB_URL = os.getenv("MONGODB_URL")
 # Log only the host part to avoid exposing credentials
 log_url = MONGODB_URL.split("@")[1] if "@" in MONGODB_URL else MONGODB_URL
@@ -24,6 +26,7 @@ except Exception as e:
 
 db = client.receptionist_poc
 appointments_collection = db.appointments
+logs_collection = db.logs
 
 try:
     appointments_collection.create_index([("phone", 1), ("datetime", 1)], unique=True)

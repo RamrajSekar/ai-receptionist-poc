@@ -11,6 +11,7 @@ import time
 from app.ai_utils import extract_appointment_details
 from app.db_utils import save_appointment
 
+
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
