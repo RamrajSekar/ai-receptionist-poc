@@ -49,7 +49,7 @@ def save_appointment(phone, name, datetime, intent=None,transcript=None,stage='I
     try:
         update_data = {
                     "name":name,
-                    "datetime":datetime,
+                    "datetime":dt.datetime.fromisoformat(datetime) if isinstance(datetime, str) else datetime,
                     "intent":intent,
                     "status":"Pending",
                     "stage":stage,
@@ -71,19 +71,26 @@ def save_appointment(phone, name, datetime, intent=None,transcript=None,stage='I
         log_to_db("ERROR",phone,"Error saving appointment",{"datetime":datetime})
 
 
-def get_conflicting_appointment(appointment_datetime: dt.datetime):
+def get_conflicting_appointment(appointment_datetime):
     """
     Return an active appointment for any phone number if it exists.
     Active means any status other than Completed or Cancelled.
     """
+    start_window = appointment_datetime - dt.timedelta(minutes=30)
+    end_window = appointment_datetime + dt.timedelta(minutes=30)
     try:
         existing = appointments_collection.find_one(
             {
-                "datetime": appointment_datetime,
+                "datetime": {"$gte": start_window, "$lte": end_window},
                 "status": {"$nin": ["Completed", "Cancelled"]}
             }
         )
-        return existing
+        if existing:
+            logger.info(f"Conflict found: {existing}")
+            return existing
+        else:
+            logger.info("No conflicts detected")
+            return None
     except Exception as e:
         logger.error(f"Error Checking Ative Appointment: {str(e)}")
         return None
