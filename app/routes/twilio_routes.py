@@ -10,7 +10,9 @@ import os
 import time
 from app.ai_utils import extract_appointment_details
 from app.db_utils import save_appointment
-
+from app.db_utils import get_conflicting_appointment
+import datetime as dt
+from app.database import appointments_collection
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -69,68 +71,9 @@ def transcribe_with_retry(file_path, retries=5):
     raise Exception("Max retries exceeded for transcription")
 
 
-def handle_recording(rec_url: str, from_number: str):
-    try:
-        logger.info(f"Backround job: Downloading {rec_url}")
-        
-        # Load Twilio credentials
-        twilio_sid = os.getenv("TWILIO_ACCOUNT_SID")
-        twilio_token = os.getenv("TWILIO_AUTH_TOKEN")
-        audio_file = f"recording_{from_number}.wav"
-        resp = download_recording_with_retry(rec_url,twilio_sid,twilio_token)
-        # assert isinstance(twilio_sid, str)
-        # assert isinstance(twilio_token, str)
-        # Step 1: Download audio as wav same as Twilio format
-        # twilio_auth: tuple[str, str] = (twilio_sid, twilio_token)
-        
-        # resp = requests.get(f"{rec_url}.wav",auth=twilio_auth)
-        content_type = resp.headers.get("Content-Type", "")
-        logger.info(f"Content-Type: {content_type}")
-        logger.info(f"File size: {len(resp.content)} bytes")
-        if "audio" not in content_type:
-            logger.error(f"❌ Invalid content type from Twilio: {str(content_type)}")
-            return
-        # Save to disk
-        with open(audio_file, "wb") as f:
-            f.write(resp.content)
-        # Step 2: Transcribe to Whisper
-        transcribe = transcribe_with_retry(audio_file)
-        if transcribe:
-            logger.info(f"Transcribed text from {from_number}: {transcribe}")
-            details = extract_appointment_details(transcribe,from_number)
-            if details:
-                save_appointment(
-                    from_number,
-                    details.get("name"),
-                    details.get("datetime"),
-                    details.get("intent"),
-                    transcribe
-                )
-        else:
-            logger.info("Failed Transcription After Retry!")
-    except Exception as e:
-            logger.error(f"Error in backgroud transcribtion: {str(e)}!")
-
-
-
 @router.post("/process_recording")
 async def process_recording(background_tasks: BackgroundTasks,RecordingUrl: str = Form(...),From: str = Form(...)):
     try:
-        # Commented on 7/10/2025
-        # logger.info(f"Recording from {From}: {RecordingUrl}")
-
-        # # Step 1: Download audio as wav same as Twilio format
-        # audio_file = "call_recording.wav"
-        # resp = requests.get(f"{RecordingUrl}.wav")
-        # with open(audio_file, "wb") as f:
-        #     f.write(resp.content)
-        # # Step 2: Transcribe to Whisper
-        # # with open(audio_file, "rb") as f:
-        # #     transcribe = openai.audio.transcriptions.create(model="whisper-1",file=f)
-        # #     transcribe = openai.audio.transcriptions.create(model="whisper-1",file=f)
-        # # user_text = transcribe.text
-        # transcribe = transcribe_with_retry(audio_file)
-        # logger.info(f"Transcribed text from {From}: {transcribe}")
         # Queue the background job
         background_tasks.add_task(handle_recording,RecordingUrl,From)
         #Step 3: Respond back to user
@@ -143,3 +86,94 @@ async def process_recording(background_tasks: BackgroundTasks,RecordingUrl: str 
     except Exception as e:
         logger.error(f"Error Occurred: {str(e)}")
         raise HTTPException(status_code=400, detail="Error Occurred In Process Recording!!")
+    
+@router.post("/process_reschedule")
+async def process_reschedule(background_tasks: BackgroundTasks,RecordingUrl: str = Form(...),From: str = Form(...)):
+    try:
+        logger.info(f"Reschedule recording from {From}: {RecordingUrl}")
+        background_tasks.add_task(handle_recording,RecordingUrl,From,True)
+        resp = VoiceResponse()
+        resp.say("Thank you. We’ve received your updated appointment time and will confirm shortly.")
+        return Response(content=str(resp), media_type="application/xml")
+    except RateLimitError:
+        raise HTTPException(status_code=400, detail="Open AI Rate limit Exceeded. Please try again later!")
+    except Exception as e:
+        logger.error(f"Error Processing Reschedule: {str(e)}")
+        raise HTTPException(status_code=400, detail="Error Occurred In Processing Reschedule!!")
+
+def handle_recording(rec_url: str, from_number: str, is_reschedule: bool = False):
+    try:
+        logger.info(f"Backround job: Downloading {rec_url}")
+        
+        # Load Twilio credentials
+        twilio_sid = os.getenv("TWILIO_ACCOUNT_SID")
+        twilio_token = os.getenv("TWILIO_AUTH_TOKEN")
+        audio_file = f"recording_{from_number}.wav"
+
+        # Step 1: Download audio as wav same as Twilio format
+        resp = download_recording_with_retry(rec_url,twilio_sid,twilio_token)
+        content_type = resp.headers.get("Content-Type", "")
+        logger.info(f"Content-Type: {content_type}")
+        logger.info(f"File size: {len(resp.content)} bytes")
+        if "audio" not in content_type:
+            logger.error(f"❌ Invalid content type from Twilio: {str(content_type)}")
+            return
+
+        # Save to disk
+        with open(audio_file, "wb") as f:
+            f.write(resp.content)
+
+        # Step 2: Transcribe to Whisper
+        transcribe = transcribe_with_retry(audio_file)
+        if not transcribe:
+            logger.warning("⚠️ Transcription failed after retry!")
+            return
+        # Step 3: Extract structured details
+        logger.info(f"Transcribed text from {from_number}: {transcribe}")
+        details = extract_appointment_details(transcribe,from_number)
+        appointment_str = details.get("datetime")
+           
+        #Step 4: Parse datetime safely
+        appointment_date = None
+        for fmt in ("%Y-%m-%dT%H:%M:%SZ", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d %I:%M %p"):
+            try:
+                appointment_date = dt.datetime.strptime(appointment_str, fmt)
+                break
+            except Exception:
+                continue
+        
+        if not appointment_date:
+            logger.warning(f"Could not parse datetime from: {appointment_str}")
+            appointment_date = dt.datetime.now(dt.timezone.utc)  # fallback
+
+         # Step 5: Check for conflicting appointment (any phone)
+        
+        if not is_reschedule:
+            existing_conflict = get_conflicting_appointment(appointment_date)
+            if existing_conflict:
+                logger.info(f"Time slot already booked: {appointment_date}, User will be prompted for alternate time")
+                appointments_collection.update_one(
+                    {"phone":from_number},
+                    {"$set": {"conversation_stage": "awaiting_reschedule", "status": "Conflict"}}
+                )
+                return
+
+        # Step 6: Save
+        new_stage = "confirmed" if is_reschedule else "initial"
+        save_appointment(
+            from_number,
+            details.get("name"),
+            details.get("datetime"),
+            details.get("intent"),
+            transcribe,
+            stage=new_stage
+        )
+        # Step 7: If reschedule, update stage + reset status
+        if is_reschedule:
+            appointments_collection.update_one(
+                {"phone": from_number},
+                {"$set": {"conversation_stage": "confirmed", "status": "Pending"}}
+            )
+        logger.info(f"✅ Appointment {'rescheduled' if is_reschedule else 'booked'} successfully for {from_number}")
+    except Exception as e:
+            logger.error(f"Error in backgroud transcribtion: {str(e)}!")

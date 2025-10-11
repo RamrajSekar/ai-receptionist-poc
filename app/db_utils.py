@@ -45,13 +45,14 @@ def update_appointment_status(appointment_id: str, status: str):
     )
     return result.modified_count
 
-def save_appointment(phone, name, datetime, intent=None,transcript=None):
+def save_appointment(phone, name, datetime, intent=None,transcript=None,stage='Initial'):
     try:
         update_data = {
                     "name":name,
                     "datetime":datetime,
                     "intent":intent,
                     "status":"Pending",
+                    "stage":stage,
                     "last_updated": dt.datetime.now(dt.timezone.utc)
                 }
         if transcript:
@@ -68,4 +69,22 @@ def save_appointment(phone, name, datetime, intent=None,transcript=None):
     except Exception as e:
         logger.error(f"Error saving appointment: {str(e)}")
         log_to_db("ERROR",phone,"Error saving appointment",{"datetime":datetime})
-        
+
+
+def get_conflicting_appointment(appointment_datetime: dt.datetime):
+    """
+    Return an active appointment for any phone number if it exists.
+    Active means any status other than Completed or Cancelled.
+    """
+    try:
+        existing = appointments_collection.find_one(
+            {
+                "datetime": appointment_datetime,
+                "status": {"$nin": ["Completed", "Cancelled"]}
+            }
+        )
+        return existing
+    except Exception as e:
+        logger.error(f"Error Checking Ative Appointment: {str(e)}")
+        return None
+
