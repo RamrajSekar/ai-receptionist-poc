@@ -1,6 +1,8 @@
 import openai
 import os, json
 import logging
+import datetime as dt
+from dateutil import parser
 
 logger = logging.getLogger(__name__)
 openai.api_key = os.getenv("OPENAI_API_KEY")
@@ -27,8 +29,13 @@ def extract_appointment_details(transcript: str, incomingPhone: str):
         )
         raw_output = response.choices[0].message.content.strip()
         logger.info(f"Raw model output: {raw_output}")
-
         details = json.loads(raw_output)
+        # --- Fix future-year issue ---
+        dt_obj = parser.parse(details["datetime"])
+        now = dt.datetime.now()
+        if dt_obj.year < now.year:
+            dt_obj = dt_obj.replace(year=now.year)
+            details["datetime"] = dt_obj.isoformat()       
         logger.info(f"Extracted Details: {details}")
         return details
     except json.JSONDecodeError:

@@ -4,6 +4,7 @@ from pymongo.errors import DuplicateKeyError
 import logging
 import datetime as dt
 from app.logger_utils import log_to_db
+from dateutil import parser, tz
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -45,11 +46,17 @@ def update_appointment_status(appointment_id: str, status: str):
     )
     return result.modified_count
 
-def save_appointment(phone, name, datetime, intent=None,transcript=None,stage='Initial'):
+def save_appointment(phone, name, datetime_val, intent=None,transcript=None,stage='Initial'):
     try:
+        if isinstance(datetime_val, str):
+            try:
+                datetime_val = parser.parse(datetime_val)
+            except Exception:
+                logger.warning(f"Invalid datetime format: {datetime_val}, defaulting to now()")
+                datetime_val = dt.datetime.now(dt.timezone.utc)
         update_data = {
                     "name":name,
-                    "datetime":dt.datetime.fromisoformat(datetime) if isinstance(datetime, str) else datetime,
+                    "datetime":datetime_val,
                     "intent":intent,
                     "status":"Pending",
                     "stage":stage,
@@ -65,10 +72,10 @@ def save_appointment(phone, name, datetime, intent=None,transcript=None,stage='I
             upsert=True
         )
         logger.info(f"Appointment stored/updated for {phone}")
-        log_to_db("INFO",phone,"Appointment Saved",{"datetime":datetime})
+        log_to_db("INFO",phone,"Appointment Saved",{"datetime":datetime_val})
     except Exception as e:
         logger.error(f"Error saving appointment: {str(e)}")
-        log_to_db("ERROR",phone,"Error saving appointment",{"datetime":datetime})
+        log_to_db("ERROR",phone,"Error saving appointment",{"datetime":datetime_val})
 
 
 def get_conflicting_appointment(appointment_datetime):
@@ -76,9 +83,12 @@ def get_conflicting_appointment(appointment_datetime):
     Return an active appointment for any phone number if it exists.
     Active means any status other than Completed or Cancelled.
     """
-    start_window = appointment_datetime - dt.timedelta(minutes=30)
-    end_window = appointment_datetime + dt.timedelta(minutes=30)
     try:
+        if isinstance(appointment_datetime, str):
+            appointment_datetime = parser.parse(appointment_datetime)
+            
+        start_window = appointment_datetime - dt.timedelta(minutes=30)
+        end_window = appointment_datetime + dt.timedelta(minutes=30)
         existing = appointments_collection.find_one(
             {
                 "datetime": {"$gte": start_window, "$lte": end_window},
