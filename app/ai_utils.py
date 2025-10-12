@@ -11,12 +11,17 @@ def extract_appointment_details(transcript: str, incomingPhone: str):
     """
     Extract structured appointment details from natural language transcript using GPT-4o-mini
     """
+    # Get your local offset manually (e.g., UTC−4 for Eastern Daylight Time)
+    LOCAL_OFFSET = dt.timedelta(hours=-4)
+    LOCAL_TZ = dt.timezone(LOCAL_OFFSET, name="EDT")
+    now_local = dt.datetime.now(LOCAL_TZ).strftime("%Y-%m-%d %H:%M:%S %Z")
     prompt = f"""
     Extract structured appointment details from this message: "{transcript}"
     Return JSON with these keys:
     - name
-    - intent (book_appointment | cancel_appointment | reschedule)
-    - datetime (YYYY-MM-DDT00:00:00 24hr format if possible)
+    - intent (book_appointment | cancel_appointment | reschedule | availability)
+    - datetime (interpret relative terms like 'today' or 'tomorrow' using the current local datetime: {now_local}
+      in timezone {LOCAL_TZ.tzname(None)}. Always output full ISO 8601 format with timezone offset,e.g. 2025-10-12T10:00:00-04:00)
     - phone (if mentioned else us "{incomingPhone}")
     - note (anything extra)
     """
