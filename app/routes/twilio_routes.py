@@ -36,7 +36,6 @@ async def voice_handler(From: str = Form('4757770732'),To: str = Form('662547379
         resp.say("Hello! You reached receptionist.")
         resp.say("Please say your name and appointment time after the beep, then press the pound key when you are done!")
         resp.record(max_length=20, play_beep=True,finish_on_key="#", action="/process_recording")
-        resp.say("Thank you. Please hold a moment while we process your request.")
         get_xml_length(resp,'Voice')
         return Response(content=str(resp),media_type="application/xml")
     except Exception as e:
@@ -99,6 +98,8 @@ async def process_recording(RecordingUrl: str = Form(...), From: str = Form(...)
         # --- Download recording ---
         twilio_sid = os.getenv("TWILIO_ACCOUNT_SID")
         twilio_token = os.getenv("TWILIO_AUTH_TOKEN")
+        resp2 = VoiceResponse()
+        resp2.say("Thank you. Please hold a moment while we process your request.")
         resp = download_recording_with_retry(RecordingUrl, twilio_sid, twilio_token)
         if "audio" not in resp.headers.get("Content-Type", ""):
             logger.error(f" Invalid content type: {resp.headers.get('Content-Type')}")
@@ -112,6 +113,7 @@ async def process_recording(RecordingUrl: str = Form(...), From: str = Form(...)
         transcribe = transcribe_with_retry(audio_file)
         if not transcribe:
             logger.warning("⚠️ Transcription failed")
+            resp2.say("Sorry, we could not understand your message. Please try again later.")
             raise HTTPException(status_code=400, detail="Transcription failed")
 
         # --- Extract details ---
