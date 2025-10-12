@@ -95,11 +95,13 @@ async def process_recording(RecordingUrl: str = Form(...), From: str = Form(...)
     try:
         logger.info(f"Processing recording from {From}: {RecordingUrl}")
 
-        # --- Download recording ---
+        
         twilio_sid = os.getenv("TWILIO_ACCOUNT_SID")
         twilio_token = os.getenv("TWILIO_AUTH_TOKEN")
         resp2 = VoiceResponse()
         resp2.say("Thank you. Please hold a moment while we process your request.")
+        resp2.pause(length=3)
+        # --- Download recording ---
         resp = download_recording_with_retry(RecordingUrl, twilio_sid, twilio_token)
         if "audio" not in resp.headers.get("Content-Type", ""):
             logger.error(f" Invalid content type: {resp.headers.get('Content-Type')}")
