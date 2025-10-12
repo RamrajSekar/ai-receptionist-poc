@@ -72,22 +72,87 @@ def transcribe_with_retry(file_path, retries=5):
     raise Exception("Max retries exceeded for transcription")
 
 
+# @router.post("/process_recording")
+# async def process_recording(background_tasks: BackgroundTasks,RecordingUrl: str = Form(...),From: str = Form(...)):
+#     try:
+#         # Queue the background job
+#         background_tasks.add_task(handle_recording,RecordingUrl,From)
+#         #Step 3: Respond back to user
+#         resp = VoiceResponse()
+#         resp.say("Thank you, We received your request!")
+#         get_xml_length(resp,'process_recording')
+#         return Response(content=str(resp),media_type="application/xml")
+#     except RateLimitError:
+#         raise HTTPException(status_code=400, detail="Open AI Rate limit Exceeded. Please try again later!")
+#     except Exception as e:
+#         logger.error(f"Error Occurred: {str(e)}")
+#         raise HTTPException(status_code=400, detail="Error Occurred In Process Recording!!")
+
 @router.post("/process_recording")
-async def process_recording(background_tasks: BackgroundTasks,RecordingUrl: str = Form(...),From: str = Form(...)):
+async def process_recording(RecordingUrl: str = Form(...), From: str = Form(...)):
+    """
+    Process the recording synchronously to handle conflicts in real time.
+    """
     try:
-        # Queue the background job
-        background_tasks.add_task(handle_recording,RecordingUrl,From)
-        #Step 3: Respond back to user
-        resp = VoiceResponse()
-        resp.say("Thank you, We received your request!")
-        get_xml_length(resp,'process_recording')
-        return Response(content=str(resp),media_type="application/xml")
-    except RateLimitError:
-        raise HTTPException(status_code=400, detail="Open AI Rate limit Exceeded. Please try again later!")
+        logger.info(f"Processing recording from {From}: {RecordingUrl}")
+
+        # --- Download recording ---
+        twilio_sid = os.getenv("TWILIO_ACCOUNT_SID")
+        twilio_token = os.getenv("TWILIO_AUTH_TOKEN")
+        resp = download_recording_with_retry(RecordingUrl, twilio_sid, twilio_token)
+        if "audio" not in resp.headers.get("Content-Type", ""):
+            logger.error(f" Invalid content type: {resp.headers.get('Content-Type')}")
+            raise HTTPException(status_code=400, detail="Invalid recording type")
+
+        audio_file = f"recording_{From}.wav"
+        with open(audio_file, "wb") as f:
+            f.write(resp.content)
+
+        # --- Transcribe ---
+        transcribe = transcribe_with_retry(audio_file)
+        if not transcribe:
+            logger.warning("⚠️ Transcription failed")
+            raise HTTPException(status_code=400, detail="Transcription failed")
+
+        # --- Extract details ---
+        details = extract_appointment_details(transcribe, From)
+        appointment_str = details.get("datetime")
+
+        try:
+            appointment_dt = parser.parse(appointment_str)
+        except Exception:
+            logger.warning(f"Could not parse datetime from: {appointment_str}")
+            appointment_dt = dt.datetime.now(dt.timezone.utc)
+
+        # --- Conflict check ---
+        existing_conflict = get_conflicting_appointment(appointment_dt)
+
+        resp_xml = VoiceResponse()
+        if existing_conflict:
+            logger.info(f"Conflict found for {From} at {appointment_dt}")
+            appointments_collection.update_one(
+                {"phone": From},
+                {"$set": {"conversation_stage": "awaiting_reschedule", "status": "Conflict"}}
+            )
+            resp_xml.say("That time is already booked. Please suggest another time after the beep.")
+            resp_xml.record(max_length=20, play_beep=True, action="/process_reschedule")
+        else:
+            save_appointment(
+                From,
+                details.get("name"),
+                details.get("datetime"),
+                details.get("intent"),
+                transcribe,
+                stage="initial"
+            )
+            resp_xml.say("Thank you. Your appointment has been scheduled successfully!")
+
+        return Response(content=str(resp_xml), media_type="application/xml")
+
     except Exception as e:
-        logger.error(f"Error Occurred: {str(e)}")
-        raise HTTPException(status_code=400, detail="Error Occurred In Process Recording!!")
-    
+        logger.error(f"Error processing recording for {From}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error processing recording")
+
 @router.post("/process_reschedule")
 async def process_reschedule(background_tasks: BackgroundTasks,RecordingUrl: str = Form(...),From: str = Form(...)):
     try:
