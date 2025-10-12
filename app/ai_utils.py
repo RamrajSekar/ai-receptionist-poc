@@ -30,12 +30,22 @@ def extract_appointment_details(transcript: str, incomingPhone: str):
         raw_output = response.choices[0].message.content.strip()
         logger.info(f"Raw model output: {raw_output}")
         details = json.loads(raw_output)
-        # --- Fix future-year issue ---
+        
         dt_obj = parser.parse(details["datetime"])
         now = dt.datetime.now()
+        # --- Fix future-year issue ---
         if dt_obj.year < now.year:
             dt_obj = dt_obj.replace(year=now.year)
-            details["datetime"] = dt_obj.isoformat()       
+         # --- Detect possible "stale" dates (AI returned day < today) ---
+        if (dt_obj.date() - now.date()).days < 0:
+            # Treat it as "tomorrow" or a future intent if it's too far in the past
+            if abs((dt_obj.date() - now.date()).days) <= 7:
+                dt_obj = now + dt.timedelta(days=1)
+            else:
+            # Default to today if AI output makes no sense
+                dt_obj = now
+        # Normalize timezone to UTC for DB
+        details["datetime"] = dt_obj.replace(tzinfo=dt.timezone.utc).isoformat()    
         logger.info(f"Extracted Details: {details}")
         return details
     except json.JSONDecodeError:

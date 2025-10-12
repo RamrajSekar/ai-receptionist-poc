@@ -12,6 +12,7 @@ from app.ai_utils import extract_appointment_details
 from app.db_utils import save_appointment
 from app.db_utils import get_conflicting_appointment
 import datetime as dt
+from dateutil import parser
 from app.database import appointments_collection
 
 router = APIRouter()
@@ -134,13 +135,8 @@ def handle_recording(rec_url: str, from_number: str, is_reschedule: bool = False
         appointment_str = details.get("datetime")
            
         #Step 4: Parse datetime safely
-        appointment_date = None
-        for fmt in ("%Y-%m-%dT%H:%M:%SZ", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d %I:%M %p"):
-            try:
-                appointment_date = dt.datetime.strptime(appointment_str, fmt)
-                break
-            except Exception:
-                continue
+        appointment_date = parser.parse(appointment_str)
+        logger.info(f"🕒 Parsed appointment datetime: {appointment_date}")
         
         if not appointment_date:
             logger.warning(f"Could not parse datetime from: {appointment_str}")
