@@ -10,9 +10,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@headlessui/react": "^2.2.9",
     "@tailwindcss/postcss": "^4.1.14",
     "lucide-react": "^0.545.0",
     "react": "^19.1.1",
+    "react-calendar": "^6.0.0",
     "react-dom": "^19.1.1",
     "react-router-dom": "^7.9.4"
   },
