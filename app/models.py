@@ -20,15 +20,17 @@ class AppointmentCreate(BaseModel):
     name: str
     phone: str
     status: Optional[str] = "Pending"
-    datetime: str 
+    datetime: str
 
 class AppointmentResponse(BaseModel):
     id: str  # MongoDB uses _id (ObjectId) as string
     name: str
     phone: str
-    status: str
     datetime: str
-
+    intent: str
+    status: str
+    transcript: str
+    stage: str
     class Config:
         arbitrary_types_allowed = True
         json_encoders = {ObjectId: str}
