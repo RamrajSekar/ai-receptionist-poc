@@ -16,7 +16,7 @@ async def root():
 #     return {"message": "Database initialized"}
 
 #Register Routes
-# app.include_router(calls.router, prefix="/calls",tags=["Calls"])
+app.include_router(calls.router, prefix="/calls",tags=["Calls"])
 app.include_router(booking.router, prefix="/bookings",tags=["Booking"])
 app.include_router(twilio_routes.router, tags=["twilio"])
 
