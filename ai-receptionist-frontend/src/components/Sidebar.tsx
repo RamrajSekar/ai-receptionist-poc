@@ -1,11 +1,10 @@
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, CalendarDays, Settings } from "lucide-react";
-import Logo from "../assets/logo.png"; // Import the logo
+import { LayoutDashboard, Settings } from "lucide-react";
+import Logo from "../assets/logo.png"; 
 
 export default function Sidebar() {
   const menu = [
     { to: "/", label: "Dashboard", icon: <LayoutDashboard size={18} /> },
-    { to: "/manage", label: "Manage Appointments", icon: <CalendarDays size={18} /> },
     { to: "/settings", label: "Settings", icon: <Settings size={18} /> },
   ];
 

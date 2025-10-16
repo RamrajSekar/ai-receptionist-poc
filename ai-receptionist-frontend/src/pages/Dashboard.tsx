@@ -1,36 +1,69 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import DashboardLayout from "../components/DashboardLayout";
 import Header from "../components/Header";
-import AppointmentCard from "../components/AppointmentCard";
 import AppointmentTable from "../components/AppointmentTable";
-import CalendarWidget from "../components/CalendarWidget";
+import { api } from "../utils/api";
+
+interface Booking {
+  id: string;
+  name: string;
+  phone: string;
+  datetime: string;
+  status: string;
+}
 
 export default function Dashboard() {
-  const upcoming = [
-    { name: "Surya R", date: "14 Mar 2025" },
-    { name: "Ramesh Kumar", date: "16 Mar 2025" },
-  ];
+  const [bookings, setBookings] = useState<Booking[]>([]);
 
-  const appointments = [
-    { first: "Jane", last: "Cooper", phone: "9876543210", date: "13-Aug-2023", status: "open" },
-    { first: "Wade", last: "Warren", phone: "9876543210", date: "13-Aug-2023", status: "booked" },
-  ];
+  // Fetch all appointments
+  const fetchBookings = async () => {
+    try {
+      const data = await api.get("/bookings/");
+      setBookings(data);
+    } catch (err) {
+      console.error("Failed to load bookings:", err);
+    }
+  };
+
+  // Update appointment status
+  const handleStatusChange = async (id: string, status: string) => {
+  try {
+    await api.put(`/bookings/${id}?status=${encodeURIComponent(status)}`);
+    fetchBookings(); // refresh after update
+  } catch (err) {
+    console.error("Failed to update status:", err);
+  }
+};
+
+
+  // Delete appointment
+  const handleDelete = async (phone: string) => {
+    try {
+      await api.delete(`/bookings/${phone}`);
+      fetchBookings();
+    } catch (err) {
+      console.error("Failed to delete appointment:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchBookings();
+  }, []);
 
   return (
     <DashboardLayout>
-      <Header title="Dashboard" actionLabel="View Schedule" onAction={() => {}} />
+      <Header title="Appointments Dashboard" actionLabel="" onAction={() => {}} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        <div className="lg:col-span-2 bg-white rounded-xl shadow-sm p-6">
-          <h2 className="text-lg font-semibold mb-4">Upcoming Appointments</h2>
-          {upcoming.map((item, i) => (
-            <AppointmentCard key={i} name={item.name} date={item.date} />
-          ))}
-        </div>
-
-        <CalendarWidget month="April" year={2025} activeDates={[23, 24, 25]} />
+      <div className="bg-white rounded-xl shadow-sm p-6 mt-6">
+        <h2 className="text-lg font-semibold mb-4">All Appointments</h2>
+        <AppointmentTable
+          bookings={bookings}
+          onStatusChange={handleStatusChange}
+          onDelete={handleDelete}
+        />
       </div>
-
-      <AppointmentTable title="All Appointments" data={appointments} />
     </DashboardLayout>
   );
 }

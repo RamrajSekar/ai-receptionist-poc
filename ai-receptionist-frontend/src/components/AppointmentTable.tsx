@@ -1,45 +1,72 @@
-import StatusBadge from "./StatusBadge";
+"use client";
 
-export default function AppointmentTable({ title, data, onViewAll, onUpdate }: any) {
+import { useState } from "react";
+
+interface Booking {
+  id: string;
+  name: string;
+  phone: string;
+  datetime: string;
+  status: string;
+}
+
+interface Props {
+  bookings: Booking[];
+  onStatusChange: (id: string, status: string) => void;
+  onDelete: (phone: string) => void;
+}
+
+export default function AppointmentTable({ bookings, onStatusChange, onDelete }: Props) {
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+
+  if (!bookings || bookings.length === 0) {
+    return <p className="text-gray-500">No appointments found.</p>;
+  }
+
   return (
-    <div className="bg-white rounded-xl shadow-sm p-6 mt-6">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold">{title}</h2>
-        {onViewAll && (
-          <button onClick={onViewAll} className="border px-3 py-1 rounded-lg hover:bg-gray-100">
-            View All
-          </button>
-        )}
-      </div>
-
-      <table className="w-full text-left text-sm">
-        <thead className="border-b text-gray-500">
+    <div className="overflow-x-auto">
+      <table className="min-w-full border border-gray-200 rounded">
+        <thead className="bg-gray-100">
           <tr>
-            <th className="py-2">First Name</th>
-            <th>Last Name</th>
-            <th>Phone</th>
-            <th>Date & Time</th>
-            <th>Status</th>
-            <th>Action</th>
+            <th className="py-2 px-4 border-b text-left">Name</th>
+            <th className="py-2 px-4 border-b text-left">Phone</th>
+            <th className="py-2 px-4 border-b text-left">Date & Time</th>
+            <th className="py-2 px-4 border-b text-left">Status</th>
+            <th className="py-2 px-4 border-b text-left">Actions</th>
           </tr>
         </thead>
-
         <tbody>
-          {data.map((row: any, i: number) => (
-            <tr key={i} className="border-b hover:bg-gray-50">
-              <td className="py-3">{row.first}</td>
-              <td>{row.last}</td>
-              <td>{row.phone}</td>
-              <td>{row.date}</td>
-              <td>
-                <StatusBadge status={row.status} />
+          {bookings.map((booking) => (
+            <tr key={booking.id} className="hover:bg-gray-50">
+              <td className="py-2 px-4 border-b">{booking.name}</td>
+              <td className="py-2 px-4 border-b">{booking.phone}</td>
+              <td className="py-2 px-4 border-b">
+                {new Date(booking.datetime).toLocaleString()}
               </td>
-              <td>
-                <button
-                  onClick={() => onUpdate && onUpdate(row)}
-                  className="bg-green-600 text-white px-3 py-1 rounded-lg text-sm"
+              <td className="py-2 px-4 border-b">
+                <select
+                  value={booking.status}
+                  className={`border rounded px-2 py-1 ${
+                    updatingId === booking.id ? "bg-gray-200" : "bg-white"
+                  }`}
+                  onChange={async (e) => {
+                    const newStatus = e.target.value;
+                    setUpdatingId(booking.id);
+                    await onStatusChange(booking.id, newStatus);
+                    setUpdatingId(null);
+                  }}
                 >
-                  Update
+                  <option value="Pending">Pending</option>
+                  <option value="Confirmed">Confirmed</option>
+                  <option value="Cancelled">Cancelled</option>
+                </select>
+              </td>
+              <td className="py-2 px-4 border-b">
+                <button
+                  className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded transition-colors"
+                  onClick={() => onDelete(booking.phone)}
+                >
+                  Delete
                 </button>
               </td>
             </tr>

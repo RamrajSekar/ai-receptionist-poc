@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from app.routes import calls, booking, twilio_routes
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
@@ -12,6 +13,13 @@ INDEX_FILE = UI_PATH / "index.html"
 
 app = FastAPI(title='AI Receptionist POC')
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:8000"],  # Frontend dev port
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.mount("/assets", StaticFiles(directory=UI_PATH / "assets"), name="assets")
 
