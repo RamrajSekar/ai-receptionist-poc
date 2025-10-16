@@ -62,12 +62,15 @@ def get_bookings():
                     "id":str(booking["_id"]),
                     "name":booking.get("name",""),
                     "phone":booking.get("phone",""),
-                    "status":booking.get("status",""),
                     "datetime":(
                         booking["datetime"].isoformat()
                         if isinstance(booking.get("datetime"), datetime)
                         else booking.get("datetime")
                     ),
+                    "intent":booking.get("intent",""),
+                    "status":booking.get("status",""),
+                    "transcript":booking.get("transcript",""),
+                    "stage":booking.get("stage",""),
                 })
         logger.info(f"Retrieved {len(response)} bookings")
         return response
