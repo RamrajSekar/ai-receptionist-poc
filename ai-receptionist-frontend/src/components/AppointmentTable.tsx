@@ -13,15 +13,20 @@ interface Booking {
 interface Props {
   bookings: Booking[];
   onStatusChange: (id: string, status: string) => void;
-  onDelete: (phone: string) => void;
 }
 
-export default function AppointmentTable({ bookings, onStatusChange, onDelete }: Props) {
+export default function AppointmentTable({ bookings, onStatusChange }: Props) {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   if (!bookings || bookings.length === 0) {
-    return <p className="text-gray-500">No appointments found.</p>;
+    return <p className="text-gray-500 text-center py-6">No appointments found.</p>;
   }
+
+  const handleStatusUpdate = async (id: string, status: string) => {
+    setUpdatingId(id);
+    await onStatusChange(id, status);
+    setUpdatingId(null);
+  };
 
   return (
     <div className="overflow-x-auto">
@@ -43,30 +48,27 @@ export default function AppointmentTable({ bookings, onStatusChange, onDelete }:
               <td className="py-2 px-4 border-b">
                 {new Date(booking.datetime).toLocaleString()}
               </td>
-              <td className="py-2 px-4 border-b">
-                <select
-                  value={booking.status}
-                  className={`border rounded px-2 py-1 ${
-                    updatingId === booking.id ? "bg-gray-200" : "bg-white"
-                  }`}
-                  onChange={async (e) => {
-                    const newStatus = e.target.value;
-                    setUpdatingId(booking.id);
-                    await onStatusChange(booking.id, newStatus);
-                    setUpdatingId(null);
-                  }}
-                >
-                  <option value="Pending">Pending</option>
-                  <option value="Confirmed">Confirmed</option>
-                  <option value="Cancelled">Cancelled</option>
-                </select>
+              <td className="py-2 px-4 border-b font-semibold">
+                {booking.status}
               </td>
-              <td className="py-2 px-4 border-b">
+              <td className="py-2 px-4 border-b space-x-2">
                 <button
-                  className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded transition-colors"
-                  onClick={() => onDelete(booking.phone)}
+                  className={`bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded transition-colors ${
+                    updatingId === booking.id ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
+                  disabled={updatingId === booking.id}
+                  onClick={() => handleStatusUpdate(booking.id, "Confirmed")}
                 >
-                  Delete
+                  Confirm
+                </button>
+                <button
+                  className={`bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded transition-colors ${
+                    updatingId === booking.id ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
+                  disabled={updatingId === booking.id}
+                  onClick={() => handleStatusUpdate(booking.id, "Cancelled")}
+                >
+                  Cancel
                 </button>
               </td>
             </tr>

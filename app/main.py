@@ -15,7 +15,8 @@ app = FastAPI(title='AI Receptionist POC')
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8000"],  # Frontend dev port
+    allow_origins=["http://localhost:5173"], 
+     # Frontend dev port
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

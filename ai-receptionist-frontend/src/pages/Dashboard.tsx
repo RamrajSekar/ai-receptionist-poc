@@ -38,15 +38,6 @@ export default function Dashboard() {
 };
 
 
-  // Delete appointment
-  const handleDelete = async (phone: string) => {
-    try {
-      await api.delete(`/bookings/${phone}`);
-      fetchBookings();
-    } catch (err) {
-      console.error("Failed to delete appointment:", err);
-    }
-  };
 
   useEffect(() => {
     fetchBookings();
@@ -61,7 +52,7 @@ export default function Dashboard() {
         <AppointmentTable
           bookings={bookings}
           onStatusChange={handleStatusChange}
-          onDelete={handleDelete}
+          
         />
       </div>
     </DashboardLayout>

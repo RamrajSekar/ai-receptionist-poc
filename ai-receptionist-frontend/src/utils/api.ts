@@ -1,4 +1,4 @@
-export const API_BASE = ""; 
+export const API_BASE = "";
 
 export const api = {
   get: async (path: string) => {
