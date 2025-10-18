@@ -54,25 +54,47 @@ def save_appointment(phone, name, datetime_val, intent=None,transcript=None,stag
             except Exception:
                 logger.warning(f"Invalid datetime format: {datetime_val}, defaulting to now()")
                 datetime_val = dt.datetime.now(dt.timezone.utc)
-        update_data = {
-                    "name":name,
-                    "datetime":datetime_val,
-                    "intent":intent,
-                    "status":"Pending",
-                    "stage":stage,
-                    "last_updated": dt.datetime.now(dt.timezone.utc)
-                }
-        if transcript:
-            update_data['transcript']=transcript
-        if intent:
-            update_data['intent']=intent
-        appointments_collection.update_one(
-            {"phone":phone},
-            {"$set": update_data},
-            upsert=True
-        )
-        logger.info(f"Appointment stored/updated for {phone}")
-        log_to_db("INFO",phone,"Appointment Saved",{"datetime":datetime_val})
+        existing = appointments_collection.find_one({
+            "phone": phone,
+            "name": {"$regex": f"^{name}$", "$options": "i"},
+            "datetime": datetime_val
+        })
+
+        if existing:
+            # Update existing record (reschedule / re-confirm)
+            update_data = {
+                        "name":name,
+                        "datetime":datetime_val,
+                        "intent":intent,
+                        "transcript": transcript,
+                        "status":"Pending Updated",
+                        "stage":stage,
+                        "last_updated": dt.datetime.now(dt.timezone.utc)
+                    }
+            if transcript:
+                update_data['transcript']=transcript
+            if intent:
+                update_data['intent']=intent
+            appointments_collection.update_one(
+                {"_id": existing["_id"]},
+                {"$set": update_data}
+                # upsert=True
+            )
+            logger.info(f"Appointment Updated for {phone}")
+            log_to_db("INFO",phone,f"Appointment Updated for {name}",{"datetime":datetime_val})
+        else:
+            # Insert new record
+            new_record = {
+                        "name":name,
+                        "datetime":datetime_val,
+                        "intent":intent,
+                        "transcript": transcript,
+                        "status":"Pending New",
+                        "stage":stage,
+                        "last_updated": dt.datetime.now(dt.timezone.utc)
+                    }
+            appointments_collection.insert_one(new_record)
+            logger.info(f"New appointment booked for {name} ({phone}) at {datetime_val}")
     except Exception as e:
         logger.error(f"Error saving appointment: {str(e)}")
         log_to_db("ERROR",phone,"Error saving appointment",{"datetime":datetime_val})
