@@ -64,6 +64,7 @@ def save_appointment(phone, name, datetime_val, intent=None,transcript=None,stag
             # Update existing record (reschedule / re-confirm)
             update_data = {
                         "name":name,
+                        "phone": phone,
                         "datetime":datetime_val,
                         "intent":intent,
                         "transcript": transcript,
@@ -86,6 +87,7 @@ def save_appointment(phone, name, datetime_val, intent=None,transcript=None,stag
             # Insert new record
             new_record = {
                         "name":name,
+                        "phone": phone,
                         "datetime":datetime_val,
                         "intent":intent,
                         "transcript": transcript,
