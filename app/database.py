@@ -44,3 +44,6 @@ def ensure_indexes():
         # logger.info("Unique index created on phone")
     except Exception as e:
         logger.error(f"Index creation error: {str(e)}")
+
+if __name__=="__main__":
+    ensure_indexes()
