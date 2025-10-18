@@ -1,5 +1,5 @@
 import os
-from pymongo import MongoClient
+from pymongo import MongoClient, ASCENDING
 import logging
 from dotenv import load_dotenv
 
@@ -28,8 +28,19 @@ db = client.receptionist_poc
 appointments_collection = db.appointments
 logs_collection = db.logs
 
-try:
-    appointments_collection.create_index([("phone", 1), ("datetime", 1)], unique=True)
-    logger.info("Unique index created on phone")
-except Exception as e:
-    logger.error(f"Index creation error: {str(e)}")
+def ensure_indexes():
+    try:
+        indexes = appointments_collection.index_information()
+        # Drop old unique index if found
+        if "phone_1" in indexes and indexes["phone_1"].get("unique"):
+            logger.info("Dropping old unique phone index...")
+            appointments_collection.drop_index("phone_1")
+        appointments_collection.create_index(
+            [("phone", ASCENDING), ("datetime", ASCENDING)],
+            unique=False,
+            name="phone_datetime_index"
+        )
+        # appointments_collection.create_index([("phone", 1), ("datetime", 1)], unique=True)
+        # logger.info("Unique index created on phone")
+    except Exception as e:
+        logger.error(f"Index creation error: {str(e)}")
