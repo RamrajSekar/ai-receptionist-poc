@@ -32,14 +32,16 @@ def ensure_indexes():
     try:
         indexes = appointments_collection.index_information()
         # Drop old unique index if found
-        if "phone_1" in indexes and indexes["phone_1"].get("unique"):
+        if "phone_1" in indexes and indexes["phone_1"].get("unique", False):
             logger.info("Dropping old unique phone index...")
             appointments_collection.drop_index("phone_1")
-        appointments_collection.create_index(
-            [("phone", ASCENDING), ("datetime", ASCENDING)],
-            unique=False,
-            name="phone_datetime_index"
-        )
+        if "phone_datetime_index" not in indexes:
+            appointments_collection.create_index(
+                [("phone", ASCENDING), ("datetime", ASCENDING)],
+                unique=False,
+                name="phone_datetime_index"
+            )
+            logger.info("Created composite index (phone, datetime)")
         # appointments_collection.create_index([("phone", 1), ("datetime", 1)], unique=True)
         # logger.info("Unique index created on phone")
     except Exception as e:
