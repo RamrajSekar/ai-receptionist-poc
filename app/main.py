@@ -15,7 +15,10 @@ app = FastAPI(title='AI Receptionist POC')
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"], 
+    allow_origins=[
+        "http://localhost:5173",
+        "https://ai-receptionist-poc.onrender.com/"
+        ], 
      # Frontend dev port
     allow_credentials=True,
     allow_methods=["*"],
@@ -38,6 +41,9 @@ app.include_router(calls.router, prefix="/calls",tags=["Calls"])
 app.include_router(booking.router, prefix="/bookings",tags=["Booking"])
 app.include_router(twilio_routes.router, tags=["twilio"])
 
+@app.get("/")
+async def serve_root():
+    return FileResponse(INDEX_FILE)
 
 @app.get("/{full_path:path}")
 async def serve_react_app(full_path: str):
