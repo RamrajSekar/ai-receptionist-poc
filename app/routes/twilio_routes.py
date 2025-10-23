@@ -14,6 +14,7 @@ from app.db_utils import get_conflicting_appointment
 import datetime as dt
 from dateutil import parser
 from app.database import appointments_collection
+from app.email_utils import send_booking_email
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -150,6 +151,13 @@ async def process_recording(RecordingUrl: str = Form(...), From: str = Form(...)
                 stage="initial"
             )
             resp_xml.say("Thank you. Your appointment has been scheduled successfully!")
+            await send_booking_email({
+                "name": details.get("name"),
+                "phone": From,
+                "datetime": details.get("datetime"),
+                "status": "Confirmed",
+                "transcript": transcribe,
+            })
 
         return Response(content=str(resp_xml), media_type="application/xml")
 
