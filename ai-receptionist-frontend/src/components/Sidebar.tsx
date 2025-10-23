@@ -1,6 +1,6 @@
 import { NavLink } from "react-router-dom";
 import { LayoutDashboard, Settings } from "lucide-react";
-import Logo from "../assets/logo.png"; 
+import Logo from "../assets/ai-logo.png"; 
 
 export default function Sidebar() {
   const menu = [
@@ -8,15 +8,14 @@ export default function Sidebar() {
     { to: "/settings", label: "Settings", icon: <Settings size={18} /> },
   ];
 
-
   return (
-    <aside className="w-64 bg-black text-white flex flex-col justify-between min-h-screen p-6">
+    <aside className="w-64 bg-[#003D4D] text-[#D5E1E3] flex flex-col justify-between min-h-screen p-6">
       <div>
         <div className="flex items-center gap-3 mb-10">
-          <div className=" rounded overflow-hidden flex items-center justify-center">
-            <img src={Logo} alt="Logo" className="w-full h-full object-cover" />
+          <div className="rounded overflow-hidden w-12 h-12 flex items-center justify-center">
+            <img src={Logo} alt="Logo" className="w-full h-full object-contain" />
           </div>
-          
+          <h2 className="text-lg font-semibold text-white">AI Receptionist</h2>
         </div>
 
         <nav className="space-y-2">
@@ -25,8 +24,10 @@ export default function Sidebar() {
               key={item.to}
               to={item.to}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-2 rounded-lg transition ${
-                  isActive ? "bg-white text-black font-medium" : "hover:bg-gray-800"
+                `flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-200 ${
+                  isActive
+                    ? "bg-white text-[#003D4D] font-medium shadow-sm"
+                    : "hover:bg-[#007C8C] hover:text-white"
                 }`
               }
             >
@@ -36,7 +37,6 @@ export default function Sidebar() {
           ))}
         </nav>
       </div>
-
     </aside>
   );
 }
