@@ -91,7 +91,7 @@ def save_appointment(phone, name, datetime_val, intent=None,transcript=None,stag
                         "datetime":datetime_val,
                         "intent":intent,
                         "transcript": transcript,
-                        "status":"Pending New",
+                        "status":"Pending Now",
                         "stage":stage,
                         "last_updated": dt.datetime.now(dt.timezone.utc)
                     }
