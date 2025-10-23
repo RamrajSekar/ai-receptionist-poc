@@ -89,7 +89,7 @@ def transcribe_with_retry(file_path, retries=5):
 #         raise HTTPException(status_code=400, detail="Error Occurred In Process Recording!!")
 
 @router.post("/process_recording")
-async def process_recording(RecordingUrl: str = Form(...), From: str = Form(...)):
+async def process_recording(RecordingUrl: str = Form(...), From: str = Form(...),background_tasks: BackgroundTasks = None):
     """
     Process the recording synchronously to handle conflicts in real time.
     """
@@ -151,13 +151,16 @@ async def process_recording(RecordingUrl: str = Form(...), From: str = Form(...)
                 stage="initial"
             )
             resp_xml.say("Thank you. Your appointment has been scheduled successfully!")
-            await send_booking_email({
-                "name": details.get("name"),
-                "phone": From,
-                "datetime": details.get("datetime"),
-                "status": "Confirmed",
-                "transcript": transcribe,
-            })
+        
+        booking_data = {
+            "name": details.get("name"),
+            "phone": From,
+            "datetime": details.get("datetime"),
+            "status": "Confirmed",
+            "transcript": transcribe,
+        }
+        if background_tasks:
+            background_tasks.add_task(send_booking_email, booking_data)
 
         return Response(content=str(resp_xml), media_type="application/xml")
 
