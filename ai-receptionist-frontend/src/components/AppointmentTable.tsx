@@ -82,24 +82,30 @@ export default function AppointmentTable({ bookings, onStatusChange }: Props) {
                 <td className="py-2 px-4 border-b">{new Date(b.datetime).toLocaleString()}</td>
                 <td className="py-2 px-4 border-b">{getStatusPill(b.status)}</td>
                 <td className="py-2 px-4 border-b flex gap-2">
-                  <button
-                    className={`bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded ${
-                      updatingId === b.id ? "opacity-50 cursor-not-allowed" : ""
-                    }`}
-                    disabled={updatingId === b.id}
-                    onClick={() => handleStatusUpdate(b.id, "Confirmed")}
-                  >
-                    Confirm
-                  </button>
-                  <button
-                    className={`bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded ${
-                      updatingId === b.id ? "opacity-50 cursor-not-allowed" : ""
-                    }`}
-                    disabled={updatingId === b.id}
-                    onClick={() => handleStatusUpdate(b.id, "Cancelled")}
-                  >
-                    Cancel
-                  </button>
+                  {/* Show buttons only if status is pending */}
+                  {b.status.toLowerCase() === "pending now" && (
+                    <>
+                      <button
+                        className={`bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded ${
+                          updatingId === b.id ? "opacity-50 cursor-not-allowed" : ""
+                        }`}
+                        disabled={updatingId === b.id}
+                        onClick={() => handleStatusUpdate(b.id, "Confirmed")}
+                      >
+                        Confirm
+                      </button>
+                      <button
+                        className={`bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded ${
+                          updatingId === b.id ? "opacity-50 cursor-not-allowed" : ""
+                        }`}
+                        disabled={updatingId === b.id}
+                        onClick={() => handleStatusUpdate(b.id, "Cancelled")}
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  )}
+                  {/* View button always shows */}
                   <button
                     className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded"
                     onClick={() => setSelectedBooking(b)}
