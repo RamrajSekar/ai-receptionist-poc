@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import DashboardLayout from "../components/DashboardLayout";
 import Header from "../components/Header";
 import { api } from "../utils/api";
 import AppointmentTable from "../components/AppointmentTable";
 import SummaryTable from "../components/SummaryTable";
+import TodayAppointmentsTable from "../components/TodayAppointmentsTable";
 
 interface Booking {
   id: string;
@@ -21,19 +22,23 @@ interface Booking {
 export default function Dashboard() {
   const [bookings, setBookings] = useState<Booking[]>([]);
 
+  //  Fetch all bookings
   const fetchBookings = async () => {
     try {
       const data = await api.get("/bookings/");
-      setBookings(data);
+      setBookings(data.sort((a: Booking, b: Booking) => new Date(b.datetime).getTime() - new Date(a.datetime).getTime())); // latest first
     } catch (err) {
       console.error("Failed to load bookings:", err);
     }
   };
 
+  //  Update status and refresh instantly
   const handleStatusChange = async (id: string, status: string) => {
     try {
       await api.put(`/bookings/${id}?status=${encodeURIComponent(status)}`);
-      fetchBookings();
+      setBookings((prev) =>
+        prev.map((b) => (b.id === id ? { ...b, status } : b))
+      );
     } catch (err) {
       console.error("Failed to update status:", err);
     }
@@ -43,28 +48,22 @@ export default function Dashboard() {
     fetchBookings();
   }, []);
 
-  const summaryByDate = useMemo(() => {
-    const summary: Record<string, { confirmed: number; pending: number; cancelled: number }> = {};
-    bookings.forEach((b) => {
-      const dateKey = new Date(b.datetime).toLocaleDateString();
-      if (!summary[dateKey]) summary[dateKey] = { confirmed: 0, pending: 0, cancelled: 0 };
-      if (b.status.toLowerCase() === "confirmed") summary[dateKey].confirmed++;
-      else if (b.status.toLowerCase() === "cancelled") summary[dateKey].cancelled++;
-      else summary[dateKey].pending++;
-    });
-    return summary;
-  }, [bookings]);
-
   return (
     <DashboardLayout>
       <Header title="Appointments Dashboard" />
 
-      {/* Summary Table */}
-      <SummaryTable summary={summaryByDate} />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+        <SummaryTable bookings={bookings} />
+        <TodayAppointmentsTable
+          bookings={bookings}
+          onStatusChange={handleStatusChange}
+        />
+      </div>
 
-      {/* All Appointments Table */}
-      <div className="bg-white rounded-xl shadow p-6 border border-gray-200 mt-6">
-        <h2 className="text-lg font-semibold mb-4 text-gray-800">All Appointments</h2>
+      <div className="bg-white rounded-xl shadow p-6 border border-gray-200 mt-6 overflow-x-auto">
+        <h2 className="text-lg font-semibold mb-4 text-gray-800">
+          All Appointments
+        </h2>
         <AppointmentTable bookings={bookings} onStatusChange={handleStatusChange} />
       </div>
     </DashboardLayout>
