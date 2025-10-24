@@ -12,10 +12,10 @@ export default function Sidebar() {
     <aside className="w-64 bg-[#003D4D] text-[#D5E1E3] flex flex-col justify-between min-h-screen p-6">
       <div>
         <div className="flex items-center gap-3 mb-10">
-          <div className="rounded overflow-hidden w-12 h-12 flex items-center justify-center">
-            <img src={Logo} alt="Logo" className="w-full h-full object-contain" />
+          <div className="rounded overflow-hidden w-15 h-15 flex items-center justify-center">
+            <img src={Logo} alt="Logo" className="w-full h-full object-contain rounded-4xl" />
           </div>
-          <h2 className="text-lg font-semibold text-white">AI Receptionist</h2>
+          <h2 className="text-xm font-bold text-white">AI Receptionist</h2>
         </div>
 
         <nav className="space-y-2">
