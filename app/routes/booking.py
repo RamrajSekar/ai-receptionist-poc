@@ -62,12 +62,15 @@ def get_bookings():
                     "id":str(booking["_id"]),
                     "name":booking.get("name",""),
                     "phone":booking.get("phone",""),
-                    "status":booking.get("status",""),
                     "datetime":(
                         booking["datetime"].isoformat()
                         if isinstance(booking.get("datetime"), datetime)
                         else booking.get("datetime")
                     ),
+                    "intent":booking.get("intent",""),
+                    "status":booking.get("status",""),
+                    "transcript":booking.get("transcript",""),
+                    "stage":booking.get("stage",""),
                 })
         logger.info(f"Retrieved {len(response)} bookings")
         return response
@@ -83,7 +86,7 @@ def update_booking_status(appointment_id: str, status: str):
     Allowed statuses: confirmed, cancelled, pending
     """
     try:
-        allowed_status = {"Confirmed","Cancelled","Pending"}
+        allowed_status = {"Confirmed","Cancelled","Pending","Completed"}
 
         if status not in allowed_status:
             raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of {allowed_status}")

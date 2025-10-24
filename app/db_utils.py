@@ -1,6 +1,13 @@
 from bson.objectid import ObjectId
 from .database import appointments_collection
 from pymongo.errors import DuplicateKeyError
+import logging
+import datetime as dt
+from app.logger_utils import log_to_db
+from dateutil import parser, tz
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 def create_appointment(data):
     try:
@@ -38,3 +45,87 @@ def update_appointment_status(appointment_id: str, status: str):
         {"$set": {"status": status}}
     )
     return result.modified_count
+
+def save_appointment(phone, name, datetime_val, intent=None,transcript=None,stage='Initial'):
+    try:
+        if isinstance(datetime_val, str):
+            try:
+                datetime_val = parser.parse(datetime_val)
+            except Exception:
+                logger.warning(f"Invalid datetime format: {datetime_val}, defaulting to now()")
+                datetime_val = dt.datetime.now(dt.timezone.utc)
+        existing = appointments_collection.find_one({
+            "phone": phone,
+            "name": {"$regex": f"^{name}$", "$options": "i"},
+            "datetime": datetime_val
+        })
+
+        if existing:
+            # Update existing record (reschedule / re-confirm)
+            update_data = {
+                        "name":name,
+                        "phone": phone,
+                        "datetime":datetime_val,
+                        "intent":intent,
+                        "transcript": transcript,
+                        "status":"Pending Updated",
+                        "stage":stage,
+                        "last_updated": dt.datetime.now(dt.timezone.utc)
+                    }
+            if transcript:
+                update_data['transcript']=transcript
+            if intent:
+                update_data['intent']=intent
+            appointments_collection.update_one(
+                {"_id": existing["_id"]},
+                {"$set": update_data}
+                # upsert=True
+            )
+            logger.info(f"Appointment Updated for {phone}")
+            log_to_db("INFO",phone,f"Appointment Updated for {name}",{"datetime":datetime_val})
+        else:
+            # Insert new record
+            new_record = {
+                        "name":name,
+                        "phone": phone,
+                        "datetime":datetime_val,
+                        "intent":intent,
+                        "transcript": transcript,
+                        "status":"Pending Now",
+                        "stage":stage,
+                        "last_updated": dt.datetime.now(dt.timezone.utc)
+                    }
+            appointments_collection.insert_one(new_record)
+            logger.info(f"New appointment booked for {name} ({phone}) at {datetime_val}")
+    except Exception as e:
+        logger.error(f"Error saving appointment: {str(e)}")
+        log_to_db("ERROR",phone,"Error saving appointment",{"datetime":datetime_val})
+
+
+def get_conflicting_appointment(appointment_datetime):
+    """
+    Return an active appointment for any phone number if it exists.
+    Active means any status other than Completed or Cancelled.
+    """
+    try:
+        if isinstance(appointment_datetime, str):
+            appointment_datetime = parser.parse(appointment_datetime)
+            
+        start_window = appointment_datetime - dt.timedelta(minutes=30)
+        end_window = appointment_datetime + dt.timedelta(minutes=30)
+        existing = appointments_collection.find_one(
+            {
+                "datetime": {"$gte": start_window, "$lte": end_window},
+                "status": {"$nin": ["Completed", "Cancelled"]}
+            }
+        )
+        if existing:
+            logger.info(f"Conflict found: {existing}")
+            return existing
+        else:
+            logger.info("No conflicts detected")
+            return None
+    except Exception as e:
+        logger.error(f"Error Checking Ative Appointment: {str(e)}")
+        return None
+
