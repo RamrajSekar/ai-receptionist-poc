@@ -41,7 +41,7 @@ export default function AppointmentTable({ bookings, onStatusChange }: Appointme
     const status = b.status.toLowerCase();
     const buttons = [];
 
-    if (status === "pending new" || status === "pending now") {
+    if (status === "pending new" || status === "pending now" || status === "pending") {
       buttons.push(
         <button key="confirm" className={`px-3 py-1 rounded ${buttonColors.confirm}`} onClick={() => onStatusChange(b.id, "Confirmed")}>
           Confirm

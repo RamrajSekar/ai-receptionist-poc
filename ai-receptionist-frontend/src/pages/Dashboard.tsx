@@ -22,17 +22,22 @@ interface Booking {
 export default function Dashboard() {
   const [bookings, setBookings] = useState<Booking[]>([]);
 
-  //  Fetch all bookings
+  // Fetch all bookings
   const fetchBookings = async () => {
     try {
       const data = await api.get("/bookings/");
-      setBookings(data.sort((a: Booking, b: Booking) => new Date(b.datetime).getTime() - new Date(a.datetime).getTime())); // latest first
+      setBookings(
+        data.sort(
+          (a: Booking, b: Booking) =>
+            new Date(b.datetime).getTime() - new Date(a.datetime).getTime()
+        )
+      );
     } catch (err) {
       console.error("Failed to load bookings:", err);
     }
   };
 
-  //  Update status and refresh instantly
+  // Update status instantly
   const handleStatusChange = async (id: string, status: string) => {
     try {
       await api.put(`/bookings/${id}?status=${encodeURIComponent(status)}`);
@@ -52,19 +57,27 @@ export default function Dashboard() {
     <DashboardLayout>
       <Header title="Appointments Dashboard" />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-        <SummaryTable bookings={bookings} />
-        <TodayAppointmentsTable
-          bookings={bookings}
-          onStatusChange={handleStatusChange}
-        />
-      </div>
+      {/* Top Row: Summary + Today’s Appointments aligned perfectly */}
+      <div
+  className="grid grid-cols-1 lg:grid-cols-[35%_65%] gap-6 mt-6 items-stretch"
+>
+  <SummaryTable bookings={bookings} />
+  <TodayAppointmentsTable
+    bookings={bookings}
+    onStatusChange={handleStatusChange}
+  />
+</div>
 
+
+      {/* All Appointments List */}
       <div className="bg-white rounded-xl shadow p-6 border border-gray-200 mt-6 overflow-x-auto">
         <h2 className="text-lg font-semibold mb-4 text-gray-800">
           All Appointments
         </h2>
-        <AppointmentTable bookings={bookings} onStatusChange={handleStatusChange} />
+        <AppointmentTable
+          bookings={bookings}
+          onStatusChange={handleStatusChange}
+        />
       </div>
     </DashboardLayout>
   );
