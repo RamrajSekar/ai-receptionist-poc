@@ -19,8 +19,9 @@ def create_appointment(data):
 def get_appointment_by_phone(phone):
     return str(appointments_collection.find_one({"phone": phone}))
 
-def list_appointments():
-    return list(appointments_collection.find())
+def list_appointments(filter=None):
+    filter = filter or {}
+    return list(appointments_collection.find(filter))
 
 def delete_appointment(appointment_id):
     return appointments_collection.delete_one({"_id": ObjectId(appointment_id)})
@@ -38,15 +39,15 @@ def delete_appointment_by_phone(phone: str):
     result = appointments_collection.delete_one({"phone": phone})
     return result.deleted_count
 
-def update_appointment_status(appointment_id: str, status: str):
+def update_appointment_status(appointment_id: str, status: str,owner_id: str):
     """Update appointment status"""
     result = appointments_collection.update_one(
-        {"_id": ObjectId(appointment_id)},
+        {"_id": ObjectId(appointment_id),"owner_id": ObjectId(owner_id)},
         {"$set": {"status": status}}
     )
     return result.modified_count
 
-def save_appointment(phone, name, datetime_val, intent=None,transcript=None,stage='Initial'):
+def save_appointment(phone, name, datetime_val, intent=None,transcript=None,stage='Initial',owner_id=None):
     try:
         if isinstance(datetime_val, str):
             try:
@@ -55,6 +56,7 @@ def save_appointment(phone, name, datetime_val, intent=None,transcript=None,stag
                 logger.warning(f"Invalid datetime format: {datetime_val}, defaulting to now()")
                 datetime_val = dt.datetime.now(dt.timezone.utc)
         existing = appointments_collection.find_one({
+            "owner_id": ObjectId(owner_id),
             "phone": phone,
             "name": {"$regex": f"^{name}$", "$options": "i"},
             "datetime": datetime_val

@@ -1,0 +1,59 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+
+export default function Signup() {
+  const [form, setForm] = useState({
+    firstname: "",
+    lastname: "",
+    email: "",
+    password: "",
+  });
+  const navigate = useNavigate();
+
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch("http://localhost:8000/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+
+      if (!res.ok) throw new Error("Signup failed");
+      navigate("/login");
+    } catch (err) {
+      console.error(err);
+      alert("Signup failed");
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col justify-center items-center bg-gray-50">
+      <form
+        onSubmit={handleSignup}
+        className="bg-white shadow-md rounded-lg p-8 w-full max-w-sm"
+      >
+        <h2 className="text-2xl font-bold mb-6 text-center">Sign Up</h2>
+        {["firstname", "lastname", "email", "password"].map((field) => (
+          <input
+            key={field}
+            type={field === "password" ? "password" : "text"}
+            placeholder={field.charAt(0).toUpperCase() + field.slice(1)}
+            value={form[field as keyof typeof form]}
+            onChange={(e) =>
+              setForm({ ...form, [field]: e.target.value })
+            }
+            className="border rounded w-full px-3 py-2 mb-4"
+            required
+          />
+        ))}
+        <button
+          type="submit"
+          className="bg-green-600 hover:bg-green-700 text-white w-full py-2 rounded-lg"
+        >
+          Sign Up
+        </button>
+      </form>
+    </div>
+  );
+}

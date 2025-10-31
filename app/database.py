@@ -12,6 +12,8 @@ logger = logging.getLogger(__name__)
 
 
 MONGODB_URL = os.getenv("MONGODB_URL")
+if not MONGODB_URL:
+    raise RuntimeError("❌ MONGODB_URL environment variable is not set")
 # Log only the host part to avoid exposing credentials
 log_url = MONGODB_URL.split("@")[1] if "@" in MONGODB_URL else MONGODB_URL
 logger.info(f"Connecting to MongoDB: {log_url}")
@@ -27,6 +29,8 @@ except Exception as e:
 db = client.receptionist_poc
 appointments_collection = db.appointments
 logs_collection = db.logs
+users_collection = db.users
+users_collection.create_index([("email", ASCENDING)], unique=True)
 
 def ensure_indexes():
     try:
@@ -49,3 +53,4 @@ def ensure_indexes():
 
 if __name__=="__main__":
     ensure_indexes()
+    print(db.list_collection_names())

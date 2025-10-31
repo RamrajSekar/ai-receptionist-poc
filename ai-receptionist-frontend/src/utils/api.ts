@@ -3,15 +3,25 @@ export const API_BASE = "";
 
 export const api = {
   get: async (path: string) => {
-    const res = await fetch(`${API_BASE}${path}`);
+    const token = localStorage.getItem("token");
+    const res = await fetch(`${API_BASE}${path}`,
+       {
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    }
+    );
     if (!res.ok) throw new Error("Failed to fetch");
     return res.json();
   },
 
   post: async (path: string, body: any) => {
+    const token = localStorage.getItem("token");
     const res = await fetch(`${API_BASE}${path}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       body: JSON.stringify(body),
     });
     if (!res.ok) throw new Error("Failed to post");
@@ -19,9 +29,12 @@ export const api = {
   },
 
   put: async (path: string, body?: any) => {
+    const token = localStorage.getItem("token");
     const res = await fetch(`${API_BASE}${path}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
       body: body ? JSON.stringify(body) : undefined,
     });
     if (!res.ok) throw new Error("Failed to put");

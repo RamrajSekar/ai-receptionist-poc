@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Form,HTTPException, BackgroundTasks
+from fastapi import APIRouter, Form,HTTPException, BackgroundTasks, Depends
 from fastapi.responses import Response
 from twilio.twiml.voice_response import VoiceResponse
 from twilio.rest import Client
@@ -15,6 +15,7 @@ import datetime as dt
 from dateutil import parser
 from app.database import appointments_collection
 from app.email_utils import send_booking_email
+from app.dependencies.auth_dep import get_current_user
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -72,24 +73,8 @@ def transcribe_with_retry(file_path, retries=5):
     raise Exception("Max retries exceeded for transcription")
 
 
-# @router.post("/process_recording")
-# async def process_recording(background_tasks: BackgroundTasks,RecordingUrl: str = Form(...),From: str = Form(...)):
-#     try:
-#         # Queue the background job
-#         background_tasks.add_task(handle_recording,RecordingUrl,From)
-#         #Step 3: Respond back to user
-#         resp = VoiceResponse()
-#         resp.say("Thank you, We received your request!")
-#         get_xml_length(resp,'process_recording')
-#         return Response(content=str(resp),media_type="application/xml")
-#     except RateLimitError:
-#         raise HTTPException(status_code=400, detail="Open AI Rate limit Exceeded. Please try again later!")
-#     except Exception as e:
-#         logger.error(f"Error Occurred: {str(e)}")
-#         raise HTTPException(status_code=400, detail="Error Occurred In Process Recording!!")
-
 @router.post("/process_recording")
-async def process_recording(RecordingUrl: str = Form(...), From: str = Form(...),background_tasks: BackgroundTasks = None):
+async def process_recording(RecordingUrl: str = Form(...), From: str = Form(...),background_tasks: BackgroundTasks = None, user=Depends(get_current_user)):
     """
     Process the recording synchronously to handle conflicts in real time.
     """
@@ -148,7 +133,8 @@ async def process_recording(RecordingUrl: str = Form(...), From: str = Form(...)
                 details.get("datetime"),
                 details.get("intent"),
                 transcribe,
-                stage="initial"
+                stage="initial",
+                owner_id=user["_id"]
             )
             resp_xml.say("Thank you. Your appointment has been scheduled successfully!")
         
@@ -182,7 +168,7 @@ async def process_reschedule(background_tasks: BackgroundTasks,RecordingUrl: str
         logger.error(f"Error Processing Reschedule: {str(e)}")
         raise HTTPException(status_code=400, detail="Error Occurred In Processing Reschedule!!")
 
-def handle_recording(rec_url: str, from_number: str, is_reschedule: bool = False):
+def handle_recording(rec_url: str, from_number: str, is_reschedule: bool = False, user=Depends(get_current_user)):
     try:
         logger.info(f"Backround job: Downloading {rec_url}")
         
@@ -242,7 +228,8 @@ def handle_recording(rec_url: str, from_number: str, is_reschedule: bool = False
             details.get("datetime"),
             details.get("intent"),
             transcribe,
-            stage=new_stage
+            stage=new_stage,
+            owner_id=user["_id"]
         )
         # Step 7: If reschedule, update stage + reset status
         if is_reschedule:

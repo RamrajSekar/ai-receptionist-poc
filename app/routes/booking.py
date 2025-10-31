@@ -1,34 +1,21 @@
 from fastapi import APIRouter, Depends, HTTPException
 from app.models import AppointmentCreate, AppointmentResponse
 from app.database import appointments_collection
+from app.dependencies.auth_dep import get_current_user
 from pymongo.errors import DuplicateKeyError
 from datetime import datetime
 from app import db_utils
 import logging
 from bson.errors import InvalidId
-
-# Below is for SQLITE
-# @router.get("/")
-# def get_bookings(db: Session=Depends(get_db)):
-#     try:
-#         bookings = db.query(Appointment).all()
-#         logger.info(f"Retrieved {len(bookings)} bookings")
-#         if not bookings:
-#             return {"message": "No appointments found", "data": []}
-#         return bookings
-#     except OperationalError as e:
-#         logger.error(f"Database error: {str(e)}")
-#         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
-#     except Exception as e:
-#         logger.error(f"Unexpected error: {str(e)}")
-#         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+from bson import ObjectId
 
 router = APIRouter()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 @router.post("/",response_model=AppointmentResponse)
-def create_booking(appointment: AppointmentCreate):
+def create_booking(appointment: AppointmentCreate, user=Depends(get_current_user)):
     try:
         # existing = appointments_collection.find_one({"phone": appointment.phone})
         # if existing:
@@ -40,10 +27,11 @@ def create_booking(appointment: AppointmentCreate):
         
         appointment_dict = appointment.model_dump()
         appointment_dict["status"] = "Pending"
+        appointment_dict["owner_id"] = ObjectId(user["_id"])
         
         inserted_id = db_utils.create_appointment(appointment_dict)
         appointment_dict["id"] = inserted_id
-        logger.info(f"Created booking for {appointment.phone}")
+        logger.info(f"Created booking for {appointment.phone} with userid {user['_id']}")
         return appointment_dict
     except DuplicateKeyError:
         raise HTTPException(status_code=400, detail="Phone number already exists")
@@ -52,10 +40,10 @@ def create_booking(appointment: AppointmentCreate):
         raise HTTPException(status_code=400, detail="Invalid Phone number/Number already exists")
 
 
-@router.get("/",response_model=list[AppointmentResponse])
-def get_bookings():
+@router.get("/secure",response_model=list[AppointmentResponse])
+def get_bookings(user=Depends(get_current_user)):
     try:
-        bookings = db_utils.list_appointments()
+        bookings = db_utils.list_appointments(filter={"owner_id": ObjectId(user["_id"])})
         response = []
         for booking in bookings:
             response.append({
@@ -80,7 +68,7 @@ def get_bookings():
 
 
 @router.put("/{appointment_id}",response_model=dict)
-def update_booking_status(appointment_id: str, status: str):
+def update_booking_status(appointment_id: str, status: str,user=Depends(get_current_user)):
     """
     Update the status of an appointment.
     Allowed statuses: confirmed, cancelled, pending
@@ -90,8 +78,7 @@ def update_booking_status(appointment_id: str, status: str):
 
         if status not in allowed_status:
             raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of {allowed_status}")
-        
-        modified_count = db_utils.update_appointment_status(appointment_id, status)
+        modified_count = db_utils.update_appointment_status(appointment_id, status,user["_id"])
         if modified_count==0:
             raise HTTPException(status_code=400, detail=f"Appointment {appointment_id} Not Found ")
         logger.info(f"Updated booking {appointment_id} → {status}")
