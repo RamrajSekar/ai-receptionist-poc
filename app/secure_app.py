@@ -20,7 +20,3 @@ def create_access_token(data: dict):
     expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-
-# Test Password Manually
-# a = verify_password('India@11',"$2b$12$mSKOJo8X3bikQjib7Nm7N.4hdioyalxzPgr8Tlj49s7spukD/6jwK")
-# print(a)
