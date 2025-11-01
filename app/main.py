@@ -34,7 +34,7 @@ app.include_router(booking.router, prefix="/bookings",tags=["Booking"])
 app.include_router(twilio_routes.router, tags=["twilio"])
 
 @app.get("/")
-async def serve_root(user=Depends(get_current_user)):
+async def serve_root():
     return FileResponse(INDEX_FILE)
 
 @app.get("/{full_path:path}")
