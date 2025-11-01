@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
+import { API_BASE } from "../utils/api";
 
 export default function Signup() {
   const [form, setForm] = useState({
@@ -13,17 +14,18 @@ export default function Signup() {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch("`${API_BASE}/auth/signup", {
+      const res = await fetch(`${API_BASE}/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
 
-      if (!res.ok) throw new Error("Signup failed");
+      if (!res.ok) {throw new Error("Signup failed!!");}
+      else {alert("Signed Up Successfully!!")}
       navigate("/login");
     } catch (err) {
       console.error(err);
-      alert("Signup failed");
+      alert("Signup failed!!");
     }
   };
 
@@ -54,6 +56,12 @@ export default function Signup() {
           Sign Up
         </button>
       </form>
+      <p className="text-center text-gray-600 mt-4 text-sm">
+          Already have an account?{" "}
+          <Link to="/login" className="text-blue-600 hover:underline">
+            Click here to login!
+          </Link>
+        </p>
     </div>
   );
 }
