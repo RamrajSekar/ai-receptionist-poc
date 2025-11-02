@@ -27,7 +27,7 @@ app.add_middleware(
         # "http://localhost:8000",
         "http://127.0.0.1:5173",
         "http://127.0.0.1:8000",
-        "https://ai-receptionist-poc.onrender.com/"
+        "https://ai-receptionist-poc.onrender.com"
         ], 
      # Frontend dev port
     allow_credentials=True,
