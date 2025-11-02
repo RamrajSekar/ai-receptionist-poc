@@ -2,15 +2,20 @@
 # Exit on first error
 set -o errexit  
 
+echo "Step 1: Installing Python Libraries..."
 # Step 1: Install dependencies for backend
 pip install --upgrade pip
-pip install -r requirements.txt
+pip install -r requirements.lock.txt
 
+echo "Step 2:  Building frontend..."
 # Step 2: Build the frontend
 cd app/ui
-npm install
+npm ci
 npm run build
 
-# Step 3: Copy frontend build output into FastAPI's static folder
+echo "Step 3: Copying build files to FastAPI UI directory...
+rm -rf ../ui
 mkdir -p ../ui
 cp -r dist/* ../ui/
+
+echo "Build completed successfully!"
