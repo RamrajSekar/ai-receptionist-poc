@@ -9,13 +9,13 @@ pip install -r requirements.lock.txt
 
 echo "Step 2:  Building frontend..."
 # Step 2: Build the frontend
-cd app/ui
+cd ai-receptionist-frontend/app/ui
 npm ci
 npm run build
 
 echo "Step 3: Copying build files to FastAPI UI directory...
-rm -rf ../app/ui
+rm -r ../app/ui
 mkdir -p ../app/ui
 cp -r dist/* ../app/ui/
-
+cp -r dist/* ../app/ui/
 echo "Build completed successfully!"
