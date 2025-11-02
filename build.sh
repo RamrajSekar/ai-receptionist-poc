@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Exit on first error
-set -o errexit  
+set -e  
 
 echo "Step 1: Installing Python Libraries..."
 # Step 1: Install dependencies for backend
