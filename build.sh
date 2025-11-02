@@ -14,8 +14,8 @@ npm ci
 npm run build
 
 echo "Step 3: Copying build files to FastAPI UI directory...
-rm -rf ../ui
-mkdir -p ../ui
-cp -r dist/* ../ui/
+rm -rf ../app/ui
+mkdir -p ../app/ui
+cp -r dist/* ../app/ui/
 
 echo "Build completed successfully!"
