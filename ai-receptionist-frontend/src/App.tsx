@@ -5,6 +5,7 @@ import Signup from "./pages/SignUp_Page";
 import Dashboard from "./pages/Dashboard";
 import Settings from "./pages/Settings";
 import PrivateRoute from "./components/PrivateRoute";
+import Logout from "./pages/Logout";
 
 export default function App() {
   return (
@@ -14,6 +15,7 @@ export default function App() {
       <Route path="/signup" element={<Signup />} />
       <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
       <Route path="/settings" element={<Settings />} />
+      <Route path="/logout" element={<Logout />} />
     </Routes>
   );
 }

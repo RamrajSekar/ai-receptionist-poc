@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { API_BASE } from "../utils/api";
+const API_BASE = import.meta.env.VITE_API_BASE_URL;
+console.log("API Base:", API_BASE);
 
 export default function Signup() {
   const [form, setForm] = useState({
@@ -10,7 +11,7 @@ export default function Signup() {
     password: "",
   });
   const navigate = useNavigate();
-
+  
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -19,13 +20,17 @@ export default function Signup() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
-
-      if (!res.ok) {throw new Error("Signup failed!!");}
-      else {alert("Signed Up Successfully!!")}
+      const data = await res.json();
+      if (!res.ok) {
+        console.error("Signup failed:", data);
+        alert(`Signup failed: ${data.detail || res.statusText}`);
+        return;
+      }
+      alert("Signed Up Successfully!!")
       navigate("/login");
     } catch (err) {
-      console.error(err);
-      alert("Signup failed!!");
+      console.error("Error during signup:", err);
+      alert("Network or configuration error — check API_BASE URL.");
     }
   };
 

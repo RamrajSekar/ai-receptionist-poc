@@ -25,7 +25,7 @@ export default function Dashboard() {
   // Fetch all bookings
   const fetchBookings = async () => {
     try {
-      const data = await api.get("/bookings/");
+      const data = await api.get("/bookings/secure");
       setBookings(
         data.sort(
           (a: Booking, b: Booking) =>
@@ -40,7 +40,7 @@ export default function Dashboard() {
   // Update status instantly
   const handleStatusChange = async (id: string, status: string) => {
     try {
-      await api.put(`/bookings/${id}?status=${encodeURIComponent(status)}`);
+      await api.put(`/bookings/secure/${id}?status=${encodeURIComponent(status)}`);
       setBookings((prev) =>
         prev.map((b) => (b.id === id ? { ...b, status } : b))
       );
@@ -56,7 +56,6 @@ export default function Dashboard() {
   return (
     <DashboardLayout>
       <Header title="Appointments Dashboard" />
-
       {/* Top Row: Summary + Today’s Appointments aligned perfectly */}
       <div
   className="grid grid-cols-1 lg:grid-cols-[35%_65%] gap-6 mt-6 items-stretch"

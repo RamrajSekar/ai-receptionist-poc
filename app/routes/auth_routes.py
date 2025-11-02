@@ -10,12 +10,13 @@ import os, logging
 from app.models import Token
 from bson import ObjectId
 from app.dependencies.auth_dep import get_current_user
+from fastapi.security import HTTPBearer
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
-
+security_scheme = HTTPBearer()
 # Signup Model
 class SignupRequest(BaseModel):
     firstname: str
@@ -26,6 +27,18 @@ class SignupRequest(BaseModel):
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
+
+class UserResponse(BaseModel):
+    id: str
+    firstname: str
+    lastname: str
+    email: str
+    picture: str | None = None
+    is_active: bool
+    twilio_phone: str
+
+    class Config:
+        from_attributes = True
 
 @router.post("/signup")
 def signup(user: SignupRequest):
@@ -55,16 +68,17 @@ def login(data: LoginRequest):
     return {"access_token": token, "token_type": "bearer"}
 
    
-@router.get("/me")
-def me(user: dict = Depends(get_current_user)):
+@router.get("/me",response_model=UserResponse,dependencies=[Depends(security_scheme)])
+def get_current_user_info(user: dict = Depends(get_current_user)):
+    # Return details of the currently logged-in user.
     return {
-        "_id": user["_id"],
-        "firstname": user["firstname"],
-        "lastname": user["lastname"],
-        "email": user["email"],
-        "is_active": user["is_active"],
+        "id": str(user.get("_id")),
+        "firstname": user.get("firstname", ""),
+        "lastname": user.get("lastname", ""),
+        "email": user.get("email", ""),
+        "picture": user.get("picture", None),
+        "is_active": user.get("is_active", ""),
         "twilio_phone": user.get("twilio_phone"),
-        "created_at": user["created_at"],
     }
 
 @router.post("/{user_id}")

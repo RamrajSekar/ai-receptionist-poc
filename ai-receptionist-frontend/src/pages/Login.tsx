@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { API_BASE } from "../utils/api";
+const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
-
+  
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -15,15 +15,18 @@ export default function Login() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
-
-      if (!res.ok) {throw new Error("Login failed!!");}
-      else { alert("Login Success!!") }
       const data = await res.json();
+      if (!res.ok) {
+        console.error("Login failed:", data);
+        alert(`Login failed Check EmailId/Password : ${data.detail || res.statusText}`);
+        return;
+      }
+      else { alert("Login Success!!") }
       localStorage.setItem("token", data.access_token);
       navigate("/dashboard");
     } catch (err) {
       console.error(err);
-      alert("Login failed!!");
+      alert("Login failed Check EmailId/Password!!");
     }
   };
 
@@ -57,7 +60,6 @@ export default function Login() {
           >
             Login
           </button>
-          <a  target="/signup" title='Click Here To Signup!'></a>
         </form>
         <p className="text-center text-gray-600 mt-4 text-sm">
           Don’t have an account?{" "}

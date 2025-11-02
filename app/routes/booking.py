@@ -8,6 +8,9 @@ from app import db_utils
 import logging
 from bson.errors import InvalidId
 from bson import ObjectId
+from fastapi.security import HTTPBearer
+
+security_scheme = HTTPBearer()
 
 router = APIRouter()
 logging.basicConfig(level=logging.INFO)
@@ -40,10 +43,14 @@ def create_booking(appointment: AppointmentCreate, user=Depends(get_current_user
         raise HTTPException(status_code=400, detail="Invalid Phone number/Number already exists")
 
 
-@router.get("/secure",response_model=list[AppointmentResponse])
+@router.get("/secure",response_model=list[AppointmentResponse],dependencies=[Depends(security_scheme)])
 def get_bookings(user=Depends(get_current_user)):
     try:
-        bookings = db_utils.list_appointments(filter={"owner_id": ObjectId(user["_id"])})
+        owner_id = ObjectId(user["_id"])
+        bookings = db_utils.list_appointments(filter={"owner_id": owner_id})
+        if not bookings:
+            logger.info(f"No bookings found for user {user.get('email')}")
+            return []
         response = []
         for booking in bookings:
             response.append({

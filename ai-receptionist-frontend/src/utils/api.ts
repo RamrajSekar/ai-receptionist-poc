@@ -20,8 +20,10 @@ export const api = {
     const token = localStorage.getItem("token");
     const res = await fetch(`${API_BASE}${path}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      headers: { 
+        "Content-Type": "application/json" ,
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
       body: JSON.stringify(body),
     });
     if (!res.ok) throw new Error("Failed to post");
@@ -32,7 +34,8 @@ export const api = {
     const token = localStorage.getItem("token");
     const res = await fetch(`${API_BASE}${path}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json",
+      headers: { 
+      "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: body ? JSON.stringify(body) : undefined,
@@ -42,7 +45,13 @@ export const api = {
   },
 
   delete: async (path: string) => {
-    const res = await fetch(`${API_BASE}${path}`, { method: "DELETE" });
+    const token = localStorage.getItem("token");
+    const res = await fetch(`${API_BASE}${path}`, { 
+      method: "DELETE",
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
     if (!res.ok) throw new Error("Failed to delete");
     return res.json();
   },
