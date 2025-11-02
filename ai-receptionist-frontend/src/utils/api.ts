@@ -1,5 +1,9 @@
-export const API_BASE = import.meta.env.VITE_API_BASE_URL;
+export const API_BASE = import.meta.env.VITE_API_BASE_URL ||
+  (window.location.origin.includes("onrender.com")
+    ? "https://ai-receptionist-poc.onrender.com"
+    : "http://localhost:8000");
 
+console.log("API BASE:", import.meta.env.VITE_API_BASE_URL);
 
 export const api = {
   get: async (path: string) => {
