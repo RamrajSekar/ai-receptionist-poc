@@ -81,7 +81,8 @@ async def oauth_callback(request: Request):
         # Generate JWT token
         token = create_access_token({"sub": str(user_id), "email": user_info["email"]})
         frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
-        response = RedirectResponse(url=f"{frontend_url}/dashboard?token={token}")
+        redirect_url = f"{frontend_url}/?token={token}"
+        response = RedirectResponse(redirect_url)
         return response
     except Exception as e:
         print(f"OAuth callback error: {e}")

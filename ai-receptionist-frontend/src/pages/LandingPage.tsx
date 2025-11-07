@@ -11,21 +11,11 @@ export default function LandingPage() {
   const [loginError, setLoginError] = useState('');
   const navigate = useNavigate();
 
-  // ✅ Option 1: Handle OAuth redirect token in URL
-  // useEffect(() => {
-  //   const params = new URLSearchParams(window.location.search);
-  //   const token = params.get("token");
-  //   if (token) {
-  //     localStorage.setItem("token", token);
-  //     // Clean URL and go to dashboard
-  //     window.history.replaceState({}, "", "/dashboard");
-  //     navigate("/dashboard", { replace: true });
-  //   }
-  // }, [navigate]);
+  // ✅ Handle OAuth token redirect
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const token = params.get("token");
-    console.log("🟢 Token from URL:", token); // Add this line
+    console.log("🟢 Token from URL:", token);
 
     if (token) {
       localStorage.setItem("token", token);
@@ -35,10 +25,12 @@ export default function LandingPage() {
     }
   }, [navigate]);
 
+  // ✅ OAuth Login
   function handleOAuthLogin(provider: string) {
     window.location.href = `${API_BASE}/oauth/login/${provider}`;
   }
 
+  // ✅ Email Login
   async function handleEmailLogin() {
     try {
       setLoginError('');
@@ -51,13 +43,64 @@ export default function LandingPage() {
       const data = await response.json();
       if (response.ok) {
         localStorage.setItem('token', data.access_token);
-        window.location.href = '/dashboard'; // redirect after success
+        window.location.href = '/dashboard';
       } else {
-        const msg = await response.text();
-        throw new Error(msg || 'Invalid credentials');
+        throw new Error(data.detail || 'Invalid credentials');
       }
     } catch (err: any) {
+      console.error("Login error:", err);
       setLoginError(err.message);
+    }
+  }
+
+  // ✅ Signup + Auto-login
+  async function handleSignup() {
+    const firstname = (document.getElementById('firstname') as HTMLInputElement)?.value;
+    const lastname = (document.getElementById('lastname') as HTMLInputElement)?.value;
+    const email = (document.getElementById('signupEmail') as HTMLInputElement)?.value;
+    const password = (document.getElementById('signupPassword') as HTMLInputElement)?.value;
+
+    if (!firstname || !lastname || !email || !password) {
+      alert("Please fill all fields");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/auth/signup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ firstname, lastname, email, password }),
+      });
+
+      const data = await res.json();
+      console.log("Signup response:", res.status, data);
+
+      if (!res.ok) {
+        alert(`Signup failed: ${data.detail || "Unexpected error"}`);
+        return;
+      }
+
+      // Auto-login step
+      const loginRes = await fetch(`${API_BASE}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const loginData = await loginRes.json();
+
+      if (loginRes.ok) {
+        localStorage.setItem("token", loginData.access_token);
+        alert("Account created and logged in!");
+        setShowSignup(false);
+        navigate("/dashboard");
+      } else {
+        alert("Account created! Please login manually.");
+        setShowSignup(false);
+        setShowLogin(true);
+      }
+    } catch (err) {
+      console.error("Signup error:", err);
+      alert("Signup failed — check API connection.");
     }
   }
 
@@ -174,21 +217,33 @@ export default function LandingPage() {
             <h2 className='text-2xl font-semibold mb-4 text-gray-800'>Sign Up</h2>
 
             <input
+              id='firstname'
               type='text'
-              placeholder='Full Name'
+              placeholder='First Name'
               className='border rounded-lg w-full px-3 py-2 mb-3 focus:outline-green-500'
             />
             <input
+              id='lastname'
+              type='text'
+              placeholder='Last Name'
+              className='border rounded-lg w-full px-3 py-2 mb-3 focus:outline-green-500'
+            />
+            <input
+              id='signupEmail'
               type='email'
               placeholder='Email'
               className='border rounded-lg w-full px-3 py-2 mb-3 focus:outline-green-500'
             />
             <input
+              id='signupPassword'
               type='password'
               placeholder='Password'
               className='border rounded-lg w-full px-3 py-2 mb-4 focus:outline-green-500'
             />
-            <button className='bg-green-600 text-white w-full py-2 rounded-lg hover:bg-green-700'>
+            <button
+              onClick={handleSignup}
+              className='bg-green-600 text-white w-full py-2 rounded-lg hover:bg-green-700'
+            >
               Create Account
             </button>
 
