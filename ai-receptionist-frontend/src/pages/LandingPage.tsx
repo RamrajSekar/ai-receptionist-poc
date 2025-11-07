@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Helmet } from "react-helmet-async";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
@@ -96,7 +95,7 @@ export default function LandingPage() {
   return (
     <>
       {/* ✅ SEO Meta Tags */}
-      <Helmet>
+      
         <title>AI Receptionist Portal | Automate Calls & Appointments</title>
         <meta
           name="description"
@@ -107,7 +106,7 @@ export default function LandingPage() {
           content="AI receptionist, virtual assistant, voice agent, appointment scheduler, AI call automation"
         />
         <meta name="robots" content="index, follow" />
-      </Helmet>
+      
 
       {/* ✅ Hero Section */}
       <div className="min-h-screen flex flex-col justify-center items-center text-center bg-gradient-to-b from-blue-50 to-white px-6">
