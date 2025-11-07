@@ -7,7 +7,7 @@ from app.secure_app import hash_password, verify_password, create_access_token
 from app.db_user_utils import create_user, find_user_by_email, verify_user, update_user_twilio, update_user_availability
 from pydantic import BaseModel, EmailStr
 import os, logging
-from app.models import Token
+from app.models import Token, UserDB, UserPublic
 from bson import ObjectId
 from app.dependencies.auth_dep import get_current_user
 from fastapi.security import HTTPBearer
@@ -60,6 +60,17 @@ def signup(user: SignupRequest):
 
 @router.post("/login", response_model=Token)
 def login(data: LoginRequest):
+    logger.info(f"Login attempt for {data.email}")
+    # user = users_collection.find_one({"email": data.email})
+    # if not user:
+    #     logger.warning(f"User {data.email} not found in DB")
+    #     raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    # is_valid = verify_password(data.password, user["hashed_password"])
+    # logger.info(f"Password valid? {is_valid}")
+
+    # if not is_valid:
+    #     raise HTTPException(status_code=401, detail="Invalid credentials")
     user = users_collection.find_one({"email": data.email})
     if not user or not verify_password(data.password, user["hashed_password"]):
         raise HTTPException(status_code=401, detail="Invalid credentials")
@@ -68,18 +79,12 @@ def login(data: LoginRequest):
     return {"access_token": token, "token_type": "bearer"}
 
    
-@router.get("/me",response_model=UserResponse,dependencies=[Depends(security_scheme)])
-def get_current_user_info(user: dict = Depends(get_current_user)):
+@router.get("/me",response_model=UserPublic,dependencies=[Depends(security_scheme)])
+def get_current_user_info(user= Depends(get_current_user)):
     # Return details of the currently logged-in user.
-    return {
-        "id": str(user.get("_id")),
-        "firstname": user.get("firstname", ""),
-        "lastname": user.get("lastname", ""),
-        "email": user.get("email", ""),
-        "picture": user.get("picture", None),
-        "is_active": user.get("is_active", ""),
-        "twilio_phone": user.get("twilio_phone"),
-    }
+    if "_id" in user and not isinstance(user["_id"], str):
+        user["_id"] = str(user["_id"])
+    return user
 
 @router.post("/{user_id}")
 def setAvailability(available: bool ,available_from: datetime ,available_to: datetime, user: dict = Depends(get_current_user),):

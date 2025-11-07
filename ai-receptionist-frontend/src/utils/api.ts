@@ -13,10 +13,9 @@ export const api = {
       headers: {
         "Content-Type": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-    }
-    );
-    if (!res.ok) throw new Error("Failed to fetch");
+      }
+    });
+    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
     return res.json();
   },
 
@@ -28,7 +27,7 @@ export const api = {
         "Content-Type": "application/json" ,
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(body || {}),
     });
     if (!res.ok) throw new Error("Failed to post");
     return res.json();
@@ -42,7 +41,7 @@ export const api = {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      body: body ? JSON.stringify(body) : undefined,
+      body: body ? JSON.stringify(body  || {}) : undefined,
     });
     if (!res.ok) throw new Error("Failed to put");
     return res.json();

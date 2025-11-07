@@ -20,3 +20,6 @@ def create_access_token(data: dict):
     expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+a = verify_password('Admin@123','$2b$12$dYXrYUPcReHSbQWunLEUwORW0mMEpAljO9/lpmij8XDcsMA8Myjcq')
+print(a)

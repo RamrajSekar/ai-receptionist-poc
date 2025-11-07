@@ -43,9 +43,14 @@ class UserPublic(BaseModel):
     is_active: bool
     twilio_phone: Optional[str] = None
     created_at: datetime
-    available: bool
-    available_from: datetime
-    availble_to: datetime
+    available: Optional[bool] = True
+    available_from: Optional[datetime] = None
+    availble_to: Optional[datetime] = None
+    class Config:
+        populate_by_name = True
+        json_encoders = {
+            ObjectId: str
+        }
 
 class UserDB(BaseModel):
     id: Optional[str] = Field(default=None, alias="_id")
@@ -59,13 +64,30 @@ class UserDB(BaseModel):
     twilio_sid: Optional[str] = None
     twilio_auth_token: Optional[str] = None
     twilio_phone: Optional[str] = None
-    is_twilio_verified: bool = False
-    available: bool
-    available_from: datetime
-    availble_to: datetime
+    is_twilio_verified: Optional[bool] = False
+    openai_api_key: Optional[str] = None
+    sendgrid_api_key: Optional[str] = None
     created_at: datetime
 
 
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
+# ✅ Global encoder so ObjectId → str automatically everywhere
+class PyObjectId(ObjectId):
+    @classmethod
+    def __get_validators__(cls):
+        yield cls.validate
+
+    @classmethod
+    def validate(cls, v):
+        if not ObjectId.is_valid(v):
+            raise ValueError("Invalid ObjectId")
+        return str(v)  # always convert to string
+
+class BaseMongoModel(BaseModel):
+    class Config:
+        json_encoders = {ObjectId: str}
+        arbitrary_types_allowed = True
+        populate_by_name = True

@@ -67,7 +67,36 @@ export default function Login() {
             Click here to sign up!
           </Link>
         </p>
+        <div className="flex justify-center gap-3 mt-4">
+          <p className="text-center text-gray-600 mt-4 text-sm">
+          Don’t have an account?{" "}
+            <button
+              onClick={() => window.location.href = `${import.meta.env.VITE_API_BASE_URL}/oauth/login/google`}
+              className="w-full bg-blue border text-gray-700 py-2 rounded-lg flex items-center justify-center hover:bg-gray-100"
+            >
+              <img
+                src="https://developers.google.com/identity/images/g-logo.png"
+                alt="Google"
+                className="w-10 h-5 mr-2"
+              />
+              
+            </button>
+
+            <button
+              onClick={() => window.location.href = `${import.meta.env.VITE_API_BASE_URL}/oauth/login/microsoft`}
+              className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
+            >
+                <img
+                src="https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg"
+                alt="Google"
+                className="w-10 h-5 mr-2"
+              />
+              
+            </button>
+          </p>
+        </div>
       </div>
+      
     </div>
   );
 }
